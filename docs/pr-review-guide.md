@@ -6,18 +6,18 @@
 | --- | --- | --- |
 | `main` | 배포 브랜치 (Vercel이 여기를 배포) | 리더 (`cswkr8153`) |
 | `develop` | 통합 브랜치 (팀 작업이 모이는 곳) | PR 리뷰 후 머지 |
-| `feature/iws` | 작업자 개인 브랜치 | 본인이 `develop`으로 PR |
-| `feature/guwon` | 작업자 개인 브랜치 | 본인이 `develop`으로 PR |
-| `feature/csw` | 작업자 개인 브랜치 | 본인이 `develop`으로 PR |
+| `feat-iws` | 작업자 개인 브랜치 | 본인이 `develop`으로 PR |
+| `feat-guwon` | 작업자 개인 브랜치 | 본인이 `develop`으로 PR |
+| `feat-csw` | 작업자 개인 브랜치 | 본인이 `develop`으로 PR |
 
 흐름은 다음과 같습니다.
 
 ```
-feature/본인 ──PR──▶ develop ──PR──▶ main (배포)
+feat-본인 ──PR──▶ develop ──PR──▶ main (배포)
 ```
 
 - `main`, `develop`에는 직접 푸시하지 않습니다.
-- 작업은 항상 본인의 `feature/...` 브랜치에서 합니다.
+- 작업은 항상 본인의 `feat-...` 브랜치에서 합니다.
 - `develop`을 `main`으로 올리는 PR은 리더가 확인하고 머지합니다.
 
 ## 작업 시작 전 (매번)
@@ -25,25 +25,25 @@ feature/본인 ──PR──▶ develop ──PR──▶ main (배포)
 작업을 시작하기 전에 본인 브랜치를 `develop`의 최신 내용과 맞춥니다.
 
 ```bash
-git switch feature/iws          # 본인 브랜치로 이동
+git switch feat-iws          # 본인 브랜치로 이동
 git fetch origin
 git merge origin/develop        # develop의 최신 변경을 가져옴
 ```
 
-`feature/iws` 부분은 본인 브랜치 이름으로 바꿔서 입력하세요.
+`feat-iws` 부분은 본인 브랜치 이름으로 바꿔서 입력하세요.
 
 ## 작업 후 PR 올리기
 
 ```bash
 git add <파일>
 git commit -m "작업 내용 요약"
-git push origin feature/iws
+git push origin feat-iws
 ```
 
 그다음 GitHub에서 PR을 엽니다.
 
 - **base(받는 쪽):** `develop`
-- **compare(보내는 쪽):** `feature/iws`
+- **compare(보내는 쪽):** `feat-iws`
 - **제목:** 동사로 시작하는 짧은 문장
 - **본문:** 작업 내용과 관련 이슈. 이슈를 자동으로 닫으려면 `Closes #번호`를 적습니다.
 
@@ -71,7 +71,7 @@ git checkout pr-12
 
 `pr-12`는 리뷰용 임시 이름입니다. 본인 브랜치 이름과 겹치지 않으므로 안전합니다.
 
-> **주의:** `gh pr checkout 12`는 PR의 원래 브랜치 이름(예: `feature/iws`)으로 로컬 브랜치를 만듭니다. 그 이름의 브랜치를 본인이 쓰고 있다면 충돌하니 사용하지 마세요.
+> **주의:** `gh pr checkout 12`는 PR의 원래 브랜치 이름(예: `feat-iws`)으로 로컬 브랜치를 만듭니다. 그 이름의 브랜치를 본인이 쓰고 있다면 충돌하니 사용하지 마세요.
 
 ### 3. `/code-review` 실행
 가져온 브랜치에서 Claude Code를 열고 입력합니다.
@@ -98,7 +98,7 @@ gh pr review 12 --request-changes --body "수정이 필요한 이유"
 
 ### 5. 원래 브랜치로 돌아가기
 ```bash
-git switch feature/guwon        # 본인 브랜치로 복귀 (리뷰어 본인 이름으로)
+git switch feat-guwon        # 본인 브랜치로 복귀 (리뷰어 본인 이름으로)
 ```
 
 임시 브랜치를 지우려면:
@@ -115,7 +115,7 @@ git stash pop
 
 | PR | 대상 | 리뷰 | 머지 |
 | --- | --- | --- | --- |
-| `feature/...` → `develop` | `develop` | 팀원 1명 이상 | 작성자 또는 리뷰어 |
+| `feat-...` → `develop` | `develop` | 팀원 1명 이상 | 작성자 또는 리뷰어 |
 | `develop` → `main` | `main` | 리더 확인 | 리더 |
 
 - 머지 후 작성자는 본인 브랜치를 `develop`의 최신 내용과 다시 맞춘 뒤 작업을 이어갑니다. ([작업 시작 전](#작업-시작-전-매번) 참고)
@@ -123,7 +123,7 @@ git stash pop
 
 ## 자주 하는 실수
 
-- **`develop`이나 `main`에 직접 작업하기:** 항상 본인 `feature/...` 브랜치에서 작업하세요.
-- **다른 사람의 `feature/...` 브랜치에 푸시하기:** 각자 본인 브랜치에만 푸시하세요.
+- **`develop`이나 `main`에 직접 작업하기:** 항상 본인 `feat-...` 브랜치에서 작업하세요.
+- **다른 사람의 `feat-...` 브랜치에 푸시하기:** 각자 본인 브랜치에만 푸시하세요.
 - **작업 시작 전에 `develop` 동기화를 안 하기:** 오래된 상태에서 작업하면 나중에 충돌이 커집니다.
 - **`git stash`를 두고 잊어버리기:** `git stash list`로 확인하고 필요한 것은 `git stash pop`으로 복구하세요.

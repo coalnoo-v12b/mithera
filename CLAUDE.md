@@ -22,7 +22,7 @@
 
 ## Git 규칙 (초보자 기준)
 - `main`, `develop`에 직접 push 하지 않음. 모든 변경은 본인 작업 브랜치에서 PR로 병합
-- 작업 브랜치: `feature/iws`, `feature/guwon`, `feature/csw` (본인 것만 사용)
+- 작업 브랜치: `feat-iws`, `feat-guwon`, `feat-csw` (본인 것만 사용)
 - 작업 브랜치의 PR 대상은 `develop`, `develop`을 `main`으로 올리는 것은 PR로 진행 (릴리스 단위)
 - PR 리뷰 방법과 브랜치 흐름은 `docs/pr-review-guide.md` 참고
 - 커밋 전에 `git status`로 올라가는 파일 확인
