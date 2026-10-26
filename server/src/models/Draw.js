@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 
 const drawSchema = new mongoose.Schema({
+  // 추첨 번호 "yyyymmdd-N" (그날의 N번째). 이름 대신 번호로 찾을 수 있게 한다. 옛 추첨은 scripts/backfill-draw-no.js 로 채운다.
+  no: { type: String, unique: true, sparse: true },
   title: { type: String, required: true, trim: true, maxlength: 60 },
   description: { type: String, trim: true, maxlength: 300, default: '' },
   style: {
@@ -23,6 +25,9 @@ const drawSchema = new mongoose.Schema({
   },
   createdAt: { type: Date, default: Date.now },
   closedAt: Date,
+  // 참여 비밀번호(선택). 해시만 저장하고 조회에서는 빠진다. 화면에는 hasPassword 만 내려준다.
+  hasPassword: { type: Boolean, default: false },
+  passwordHash: { type: String, select: false },
   // 마감 시 확정. seed 는 추첨 전까지 비공개, commitment(= sha256(seed)) 만 공개.
   seed: { type: String, select: false },
   commitment: String,

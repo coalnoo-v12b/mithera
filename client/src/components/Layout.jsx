@@ -64,6 +64,9 @@ export default function Layout({ title, back = false, children }) {
         >
           {dark ? '☀️' : '🌙'}
         </button>
+        <button className="link small" onClick={() => nav('/home')}>
+          소개
+        </button>
         {me.isAdmin && (
           <button className="link small" onClick={() => nav('/admin')}>
             관리자

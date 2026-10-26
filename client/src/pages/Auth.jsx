@@ -1,11 +1,14 @@
 import { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useApp } from '../AppContext.js';
 import Logo from '../components/Logo.jsx';
 
 export default function Auth() {
   const { setMe, toast } = useApp();
-  const [signup, setSignup] = useState(false);
+  const nav = useNavigate();
+  const [params] = useSearchParams();
+  const [signup, setSignup] = useState(params.get('mode') === 'signup');
   const [f, setF] = useState({ nickname: '', email: '', password: '' });
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
@@ -29,6 +32,13 @@ export default function Auth() {
 
   return (
     <section className="auth">
+      <button
+        className="link small auth-back"
+        type="button"
+        onClick={() => nav('/')}
+      >
+        ← 홈으로
+      </button>
       <div className="logo">
         <Logo size={72} />
       </div>

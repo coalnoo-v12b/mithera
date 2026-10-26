@@ -1,5 +1,6 @@
 const crypto = require('crypto');
-const { User, Draw, DrawResult, RaceRecording } = require('../models');
+const bcrypt = require('bcryptjs');
+const { User, Draw, DrawResult, RaceRecording, Counter } = require('../models');
 const race = require('../utils/race');
 const {
   ALGO,
@@ -11,8 +12,14 @@ const {
   verifyResult,
 } = require('../utils/lottery');
 const { isId, fail } = require('../utils/http');
+const { parseNoQuery } = require('../utils/drawNo');
 
 const STYLES = ['wheel', 'cards', 'marbles', 'ladder'];
+
+// 추첨을 마감·실행할 수 있는 사람: 만든 사람 또는 관리자
+const isOwner = (req, d) => String(d.createdBy) === String(req.user._id);
+const canManage = (req, d) => req.isAdmin || isOwner(req, d);
+const NOT_MANAGER = '추첨을 만든 사람이나 관리자만 할 수 있어요';
 
 const resultOut = (r) => ({
   seq: r.seq,
@@ -34,9 +41,12 @@ const resultOut = (r) => ({
 async function drawOut(d, req) {
   const uid = String(req.user._id);
   const joined = d.participants.some((p) => String(p._id || p) === uid);
-  const canSee = joined || req.isAdmin;
+  const manage = canManage(req, d);
+  const canSee = joined || manage;
   const out = {
     id: String(d._id),
+    no: d.no ?? null,
+    canManage: manage,
     title: d.title,
     description: d.description,
     style: d.style,
@@ -47,6 +57,7 @@ async function drawOut(d, req) {
     closedAt: d.closedAt,
     participantCount: d.participants.length,
     joined,
+    hasPassword: !!d.hasPassword,
     commitment: d.commitment || null,
     participantsHash: d.participantsHash || null,
   };
@@ -76,19 +87,46 @@ async function findDrawForMember(req, res) {
     return null;
   }
   const uid = String(req.user._id);
-  if (!req.isAdmin && !d.participants.some((p) => String(p) === uid)) {
+  if (!canManage(req, d) && !d.participants.some((p) => String(p) === uid)) {
     fail(res, 403, '참여한 추첨만 조회할 수 있어요');
     return null;
   }
   return d;
 }
 
+// 검색어: "20261026-3" 은 그 번호, "20261026" 은 그날의 모든 추첨,
+// 그 밖의 글자는 이름에 포함된 추첨을 찾는다. (번호처럼 보여도 이름 검색은 함께 한다)
+const searchFilter = (q) => {
+  if (!q) return {};
+  const esc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const byTitle = { title: new RegExp(esc, 'i') };
+  const p = parseNoQuery(q);
+  if (!p) return byTitle;
+  const byNo = p.exact ? { no: p.exact } : { no: new RegExp(`^${p.day}-`) };
+  return { $or: [byNo, byTitle] };
+};
+
+// 목록 범위: 내가 참여한 추첨 / 내가 만든 추첨. 없으면 전체. 검색어와 함께 쓸 수 있다.
+const SCOPES = {
+  joined: (user) => ({ participants: user._id }),
+  mine: (user) => ({ createdBy: user._id }),
+};
+
 const list = async (req, res) => {
-  const draws = await Draw.find().sort({ createdAt: -1 }).limit(100);
+  const q = String(req.query.q || '')
+    .trim()
+    .slice(0, 50);
+  const scope = SCOPES[req.query.filter];
+  const parts = [scope && scope(req.user), q && searchFilter(q)].filter(
+    Boolean
+  );
+  const filter = parts.length > 1 ? { $and: parts } : parts[0] || {};
+  const draws = await Draw.find(filter).sort({ createdAt: -1 }).limit(100);
   const uid = String(req.user._id);
   res.json({
     draws: draws.map((d) => ({
       id: String(d._id),
+      no: d.no ?? null,
       title: d.title,
       style: d.style,
       status: d.status,
@@ -96,6 +134,8 @@ const list = async (req, res) => {
       drawAt: d.drawAt,
       participantCount: d.participants.length,
       joined: d.participants.some((p) => String(p) === uid),
+      mine: isOwner(req, d),
+      hasPassword: !!d.hasPassword,
       createdAt: d.createdAt,
     })),
   });
@@ -116,13 +156,21 @@ const create = async (req, res) => {
     return fail(res, 400, '설명은 300자까지 입력할 수 있어요');
   if (!Number.isInteger(winnerCount) || winnerCount < 1 || winnerCount > 100)
     return fail(res, 400, '당첨 인원은 1~100명으로 정해줘');
+  // 참여 비밀번호는 선택. 비워 두면 누구나 참여할 수 있다.
+  const password = String(b.password || '');
+  if (password && (password.length < 4 || password.length > 30))
+    return fail(res, 400, '참여 비밀번호는 4~30자로 입력해줘');
   const d = await Draw.create({
+    no: await Counter.nextDrawNo(),
     title,
     description,
     winnerCount,
     style,
     drawAt,
     createdBy: req.user._id,
+    ...(password
+      ? { hasPassword: true, passwordHash: await bcrypt.hash(password, 10) }
+      : {}),
   });
   res.json({ draw: await drawOut(d, req) });
 };
@@ -136,6 +184,13 @@ const get = async (req, res) => {
 
 const join = async (req, res) => {
   if (!isId(req.params.id)) return fail(res, 400, '잘못된 요청이에요');
+  const target = await Draw.findById(req.params.id).select('+passwordHash');
+  if (!target) return fail(res, 404, '추첨을 찾을 수 없어요');
+  if (target.hasPassword) {
+    const password = String((req.body && req.body.password) || '');
+    if (!password || !(await bcrypt.compare(password, target.passwordHash)))
+      return fail(res, 403, '참여 비밀번호가 맞지 않아요');
+  }
   const r = await Draw.updateOne(
     { _id: req.params.id, status: 'open' },
     { $addToSet: { participants: req.user._id } }
@@ -161,6 +216,7 @@ const close = async (req, res) => {
   if (!isId(req.params.id)) return fail(res, 400, '잘못된 요청이에요');
   const cur = await Draw.findById(req.params.id);
   if (!cur) return fail(res, 404, '추첨을 찾을 수 없어요');
+  if (!canManage(req, cur)) return fail(res, 403, NOT_MANAGER);
   if (cur.status !== 'open') return fail(res, 409, '이미 마감된 추첨이에요');
   if (cur.participants.length < cur.winnerCount)
     return fail(
@@ -200,6 +256,9 @@ const close = async (req, res) => {
 // 추첨 실행: 서버가 확정한 seed 로 당첨자를 정하고, 결과를 해시 체인에 잠가서 저장
 const run = async (req, res) => {
   if (!isId(req.params.id)) return fail(res, 400, '잘못된 요청이에요');
+  const owner = await Draw.findById(req.params.id).select('createdBy');
+  if (!owner) return fail(res, 404, '추첨을 찾을 수 없어요');
+  if (!canManage(req, owner)) return fail(res, 403, NOT_MANAGER);
   const d = await Draw.findOneAndUpdate(
     { _id: req.params.id, status: 'closed', commitment: { $exists: true } },
     { $set: { status: 'drawing' } },

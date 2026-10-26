@@ -23,6 +23,7 @@ export default function Detail() {
   const [local, setLocal] = useState(null); // 브라우저 검증 결과
   const [chain, setChain] = useState(null);
   const [rec, setRec] = useState(null); // 구슬 레이스 경기 기록 { raw, data }
+  const [pw, setPw] = useState(''); // 비밀번호가 걸린 추첨에 참여할 때 입력하는 값
 
   const load = useCallback(async () => {
     try {
@@ -131,10 +132,10 @@ export default function Detail() {
     };
   }, [hasResult, isRace, rec, d && d.result && d.result.hash]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const act = async (path, msg, confirmMsg) => {
+  const act = async (path, msg, confirmMsg, body) => {
     if (confirmMsg && !window.confirm(confirmMsg)) return;
     try {
-      await api(`/draws/${id}/${path}`, { method: 'POST' });
+      await api(`/draws/${id}/${path}`, { method: 'POST', body });
       if (msg) toast(msg);
       await load();
       if (path === 'run') setRunKey((k) => (k === 0 ? 1 : k));
@@ -191,7 +192,10 @@ export default function Detail() {
 
       <div className="card">
         <div className="row between">
-          <h3>{d.title}</h3>
+          <h3>
+            {d.no != null && <span className="no">No.{d.no}</span>}
+            {d.title}
+          </h3>
           <span className={'badge ' + badgeClass(d.status)}>
             {STATUS[d.status]}
           </span>
@@ -216,14 +220,34 @@ export default function Detail() {
               참여 취소
             </button>
           ) : (
-            <button
-              className="btn primary block"
-              onClick={() => act('join', '참여했어요')}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                act(
+                  'join',
+                  '참여했어요',
+                  null,
+                  d.hasPassword ? { password: pw } : undefined
+                );
+              }}
             >
-              참여하기
-            </button>
+              {d.hasPassword && (
+                <input
+                  className="join-pw"
+                  type="password"
+                  required
+                  autoComplete="off"
+                  placeholder="🔒 참여 비밀번호"
+                  value={pw}
+                  onChange={(e) => setPw(e.target.value)}
+                />
+              )}
+              <button className="btn primary block" type="submit">
+                참여하기
+              </button>
+            </form>
           ))}
-        {d.status === 'open' && me.isAdmin && (
+        {d.status === 'open' && d.canManage && (
           <button
             className="btn block"
             onClick={() =>
@@ -237,7 +261,7 @@ export default function Detail() {
             참여 마감하기 (현재 {d.participantCount}명)
           </button>
         )}
-        {d.status === 'closed' && me.isAdmin && (
+        {d.status === 'closed' && d.canManage && (
           <button
             className="btn primary block"
             onClick={() =>
@@ -251,10 +275,10 @@ export default function Detail() {
             🎲 추첨 실행
           </button>
         )}
-        {d.status === 'closed' && !me.isAdmin && (
+        {d.status === 'closed' && !d.canManage && (
           <div className="muted" style={{ marginTop: 8 }}>
-            마감됐어요. 이 화면을 열어두면 관리자가 추첨을 실행하는 순간 함께 볼
-            수 있어요.
+            마감됐어요. 이 화면을 열어두면 추첨을 만든 사람이 실행하는 순간 함께
+            볼 수 있어요.
           </div>
         )}
       </div>

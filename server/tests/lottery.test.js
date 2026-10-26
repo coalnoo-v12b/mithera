@@ -78,6 +78,23 @@ describe('race.simulate', () => {
     const opts = { seed, n: 6, winnerCount: 2 };
     expect(race.simulate(opts).raw).toBe(race.simulate(opts).raw);
   }, 30000);
+
+  it('새 추첨은 최신 트랙(v3)을 쓰고, 같은 seed 면 결과가 항상 같다', () => {
+    const opts = { seed, n: 6, winnerCount: 2 };
+    const a = race.simulate(opts);
+    expect(race.LATEST).toBe('track-v3');
+    expect(a.engine).toContain('track-v3');
+    expect(race.simulate(opts).raw).toBe(a.raw);
+  }, 30000);
+
+  it('이미 추첨된 옛 트랙(v2)도 엔진 문자열로 같은 버전을 찾아 재현한다', () => {
+    const opts = { seed, n: 6, winnerCount: 2, version: 'track-v2' };
+    const a = race.simulate(opts);
+    expect(race.versionOf(a.engine)).toBe('track-v2');
+    expect(
+      race.simulate({ ...opts, version: race.versionOf(a.engine) }).raw
+    ).toBe(a.raw);
+  }, 30000);
 });
 
 describe('DrawResult 잠금', () => {

@@ -1,4 +1,4 @@
-const { Draw, DrawResult } = require('../models');
+const { User, Draw, DrawResult } = require('../models');
 const { GENESIS, hashResult } = require('../utils/lottery');
 
 // 전체 해시 체인 검증 (결과가 하나라도 바뀌면 깨짐)
@@ -56,4 +56,25 @@ const stats = async (req, res) => {
   res.json({ draws, drawn, results: c.count, chainOk: c.ok });
 };
 
-module.exports = { chain, results, stats };
+// 랜딩 페이지용 공개 통계: 숫자만 내보낸다 (추첨 제목·참가자·seed 는 포함하지 않는다).
+// 전체 해시 체인을 다시 계산하는 비용이 있어서 60초 동안은 결과를 재사용한다.
+const PUBLIC_STATS_TTL = 60 * 1000;
+let publicStatsCache = null;
+
+const publicStats = async (req, res) => {
+  const now = Date.now();
+  if (!publicStatsCache || now - publicStatsCache.at > PUBLIC_STATS_TTL) {
+    const [users, drawn, c] = await Promise.all([
+      User.countDocuments(),
+      Draw.countDocuments({ status: 'drawn' }),
+      chainStatus(),
+    ]);
+    publicStatsCache = {
+      at: now,
+      data: { users, drawn, results: c.count, chainOk: c.ok },
+    };
+  }
+  res.json(publicStatsCache.data);
+};
+
+module.exports = { chain, results, stats, publicStats };

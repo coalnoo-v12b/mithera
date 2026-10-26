@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { api, setUnauthorizedHandler } from './api.js';
 import { AppCtx } from './AppContext.js';
 import Auth from './pages/Auth.jsx';
+import Landing from './pages/Landing.jsx';
 import List from './pages/List.jsx';
 import New from './pages/New.jsx';
 import Detail from './pages/Detail.jsx';
@@ -36,13 +37,18 @@ export default function App() {
       {me ? (
         <Routes>
           <Route path="/" element={<List />} />
+          <Route path="/home" element={<Landing />} />
           <Route path="/new" element={<New />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/draw/:id" element={<Detail />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       ) : (
-        <Auth />
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Auth />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       )}
     </AppCtx.Provider>
   );
