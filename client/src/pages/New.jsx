@@ -13,7 +13,7 @@ function defaultDrawAt() {
 }
 
 export default function New() {
-  const { me, toast } = useApp();
+  const { toast } = useApp();
   const nav = useNavigate();
   const [f, setF] = useState({
     title: '',
@@ -21,15 +21,9 @@ export default function New() {
     winnerCount: 1,
     style: 'marbles',
     drawAt: defaultDrawAt(),
+    password: '',
   });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
-
-  if (!me.isAdmin)
-    return (
-      <Layout title="새 추첨" back>
-        <div className="empty">관리자만 만들 수 있어요</div>
-      </Layout>
-    );
 
   const submit = async (e) => {
     e.preventDefault();
@@ -47,7 +41,7 @@ export default function New() {
           drawAt: when.toISOString(),
         },
       });
-      toast('추첨을 만들었어요');
+      toast(`추첨을 만들었어요 (No.${draw.no})`);
       nav('/draw/' + draw.id);
     } catch (err) {
       toast(err.message);
@@ -94,6 +88,21 @@ export default function New() {
             value={f.winnerCount}
             onChange={set('winnerCount')}
           />
+        </div>
+        <div className="field">
+          <label>참여 비밀번호 (선택)</label>
+          <input
+            type="text"
+            minLength={4}
+            maxLength={30}
+            autoComplete="off"
+            placeholder="비워 두면 누구나 참여할 수 있어요"
+            value={f.password}
+            onChange={set('password')}
+          />
+          <div className="muted" style={{ marginTop: 6 }}>
+            참여자에게 따로 알려주세요. 만든 뒤에는 다시 볼 수 없어요.
+          </div>
         </div>
         <div className="field">
           <label>연출 방식</label>

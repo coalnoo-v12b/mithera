@@ -4,7 +4,7 @@
 const crypto = require('crypto');
 const Matter = require('matter-js');
 
-const { Engine, Composite, Bodies, Body, Constraint } = Matter;
+const { Engine, Composite, Bodies, Body, Constraint, Events } = Matter;
 
 const ALGO = 'matter-physics-v1';
 
@@ -16,6 +16,8 @@ const STEP_MS = 1000 / 60;
 // 물리 조건은 버전으로 고정한다. 이미 추첨된 결과는 자기 버전으로만 다시 재현·검증되므로 기존 버전은 절대 바꾸지 않는다.
 //  - v1: 가볍고 빠르게 떨어져 구슬이 길게 흩어졌다 (기록 보존용)
 //  - v2: 공기저항을 높이고 중력도 높여, 구슬이 한 무리로 몰려 내려오며 순위가 계속 바뀐다. 밀집해서 출발한다.
+//  - v3: v2 와 같고, 범퍼에 닿은 구슬은 범퍼에서 멀어지는 방향(+ 살짝 위쪽)으로 튕겨 나간다.
+//        범퍼에 걸려 멈추는 구슬이 없어지며, 닿는 모든 구슬에 똑같이 적용되는 규칙이다 (bumperKick = 튕기는 속도).
 const VERSIONS = {
   'track-v1': { gravity: 0.28, frictionAir: 0.0015, maxCols: (n) => n },
   'track-v2': {
@@ -23,8 +25,14 @@ const VERSIONS = {
     frictionAir: 0.03,
     maxCols: (n) => Math.max(4, Math.ceil(Math.sqrt(n))),
   },
+  'track-v3': {
+    gravity: 1.5,
+    frictionAir: 0.03,
+    maxCols: (n) => Math.max(4, Math.ceil(Math.sqrt(n))), // client/src/verify.js 는 v1 이 아니면 이 규칙을 쓴다
+    bumperKick: 9,
+  },
 };
-const LATEST = 'track-v2';
+const LATEST = 'track-v3';
 const engineId = (version) =>
   `matter-js@${require('matter-js/package.json').version} ${version} dt=16.667ms`;
 const versionOf = (engine) => {
@@ -84,10 +92,15 @@ function initialState(n, f, r, version = LATEST) {
 function buildTrack() {
   const shapes = { circles: [], rects: [], bars: [] };
   const statics = [];
-  const circle = (x, y, rad, restitution = 0.6) => {
+  const circle = (x, y, rad, restitution = 0.6, label = 'pin') => {
     shapes.circles.push([x, y, rad]);
     statics.push(
-      Bodies.circle(x, y, rad, { isStatic: true, restitution, friction: 0 })
+      Bodies.circle(x, y, rad, {
+        isStatic: true,
+        restitution,
+        friction: 0,
+        label,
+      })
     );
   };
   const rect = (cx, cy, w, h, angle = 0) => {
@@ -151,9 +164,9 @@ function buildTrack() {
     const y = 2850 + row * 60;
     for (let x = 35 + (row % 2 ? 25 : 0); x <= W - 25; x += 50) circle(x, y, 7);
   }
-  circle(150, 3300, 22, 1.1);
-  circle(450, 3300, 22, 1.1);
-  circle(300, 3470, 22, 1.1);
+  circle(150, 3300, 22, 1.1, 'bumper');
+  circle(450, 3300, 22, 1.1, 'bumper');
+  circle(300, 3470, 22, 1.1, 'bumper');
 
   return { shapes, statics, bars };
 }
@@ -204,6 +217,30 @@ function simulate({ seed, n, winnerCount, version = LATEST }) {
     engine.world,
     slotOf.map((i) => marbles[i])
   );
+
+  // v3: 범퍼에 닿는 순간 구슬을 범퍼에서 멀어지는 방향으로 튕겨낸다. 항상 조금은 위쪽(뒤)으로 가게 한다.
+  if (P.bumperKick) {
+    Events.on(engine, 'collisionStart', (e) => {
+      for (const { bodyA, bodyB } of e.pairs) {
+        const bumper =
+          bodyA.label === 'bumper'
+            ? bodyA
+            : bodyB.label === 'bumper'
+              ? bodyB
+              : null;
+        if (!bumper) continue;
+        const m = bumper === bodyA ? bodyB : bodyA;
+        if (m.isStatic) continue;
+        const dx = m.position.x - bumper.position.x;
+        const dy = m.position.y - bumper.position.y;
+        const d = Math.hypot(dx, dy) || 1;
+        Body.setVelocity(m, {
+          x: (dx / d) * P.bumperKick,
+          y: Math.min((dy / d) * P.bumperKick, -2),
+        });
+      }
+    });
+  }
 
   const pos = marbles.map(() => []);
   const prev = marbles.map(() => [0, 0]);
