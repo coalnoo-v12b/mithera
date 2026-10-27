@@ -7,7 +7,7 @@ const drawSchema = new mongoose.Schema({
   description: { type: String, trim: true, maxlength: 300, default: '' },
   style: {
     type: String,
-    enum: ['wheel', 'cards', 'marbles', 'ladder'],
+    enum: ['wheel', 'cards', 'marbles', 'ladder', 'lotto'],
     default: 'wheel',
   },
   winnerCount: { type: Number, required: true, min: 1, max: 100 },

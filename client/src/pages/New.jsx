@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../api.js';
+import { api, STYLE_CAPACITY, capacityText } from '../api.js';
 import { useApp } from '../AppContext.js';
 import Layout from '../components/Layout.jsx';
 
@@ -83,7 +83,11 @@ export default function New() {
           <input
             type="number"
             min={1}
-            max={100}
+            max={
+              STYLE_CAPACITY[f.style]?.limit
+                ? STYLE_CAPACITY[f.style].winners
+                : 100
+            }
             required
             value={f.winnerCount}
             onChange={set('winnerCount')}
@@ -108,6 +112,7 @@ export default function New() {
           <label>연출 방식</label>
           <div className="style-pick">
             {[
+              ['lotto', '🎱 로또 추첨기'],
               ['marbles', '🏁 구슬 레이스'],
               ['ladder', '🪜 사다리타기'],
               ['wheel', '🎡 룰렛'],
@@ -124,6 +129,19 @@ export default function New() {
               </label>
             ))}
           </div>
+          {STYLE_CAPACITY[f.style] && (
+            <div className="style-cap">
+              <b>{capacityText(f.style)}</b>
+              <span>{STYLE_CAPACITY[f.style].why}</span>
+              {Number(f.winnerCount) > STYLE_CAPACITY[f.style].winners && (
+                <span className="warn">
+                  {STYLE_CAPACITY[f.style].limit
+                    ? `이 방식은 당첨 인원을 ${STYLE_CAPACITY[f.style].winners}명까지 정할 수 있어요`
+                    : '권장보다 당첨 인원이 많아서 연출이 길어질 수 있어요'}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <button className="btn primary block" type="submit">
           추첨 만들기

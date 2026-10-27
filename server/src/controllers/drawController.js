@@ -2,6 +2,8 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { User, Draw, DrawResult, RaceRecording, Counter } = require('../models');
 const race = require('../utils/race');
+const lotto = require('../utils/lotto');
+const roulette = require('../utils/roulette');
 const {
   ALGO,
   GENESIS,
@@ -14,7 +16,24 @@ const {
 const { isId, fail } = require('../utils/http');
 const { parseNoQuery } = require('../utils/drawNo');
 
-const STYLES = ['wheel', 'cards', 'marbles', 'ladder'];
+const STYLES = ['wheel', 'cards', 'marbles', 'ladder', 'lotto'];
+// 물리 엔진이 당첨자를 정하는 연출 방식 (seed 는 물리 조건에만 쓰인다)
+const PHYSICS = { marbles: race, lotto, wheel: roulette };
+const ENGINES = [race, lotto, roulette];
+// 기계에 들어가는 인원이 정해진 방식: 참여 인원과 당첨 인원의 최대치
+const LIMITS = {
+  lotto: {
+    name: '로또 추첨기',
+    people: lotto.MAX_BALLS,
+    winners: lotto.MAX_WINNERS,
+  },
+  wheel: {
+    name: '룰렛',
+    people: roulette.MAX_PLAYERS,
+    winners: roulette.MAX_WINNERS,
+  },
+};
+const fullMsg = (L) => `${L.name}은 최대 ${L.people}명까지 참여할 수 있어요`;
 
 // 추첨을 마감·실행할 수 있는 사람: 만든 사람 또는 관리자
 const isOwner = (req, d) => String(d.createdBy) === String(req.user._id);
@@ -156,6 +175,12 @@ const create = async (req, res) => {
     return fail(res, 400, '설명은 300자까지 입력할 수 있어요');
   if (!Number.isInteger(winnerCount) || winnerCount < 1 || winnerCount > 100)
     return fail(res, 400, '당첨 인원은 1~100명으로 정해줘');
+  if (LIMITS[style] && winnerCount > LIMITS[style].winners)
+    return fail(
+      res,
+      400,
+      `${LIMITS[style].name}은 당첨 인원을 ${LIMITS[style].winners}명까지 정할 수 있어요`
+    );
   // 참여 비밀번호는 선택. 비워 두면 누구나 참여할 수 있다.
   const password = String(b.password || '');
   if (password && (password.length < 4 || password.length > 30))
@@ -191,12 +216,26 @@ const join = async (req, res) => {
     if (!password || !(await bcrypt.compare(password, target.passwordHash)))
       return fail(res, 403, '참여 비밀번호가 맞지 않아요');
   }
+  const members = target.participants || [];
+  if (members.some((p) => String(p) === String(req.user._id)))
+    return res.json({ ok: true });
+  // 로또 추첨기·룰렛은 기계에 들어가는 공/칸 수에 한계가 있어서 인원을 제한한다
+  const L = LIMITS[target.style];
+  const roomLeft = L
+    ? { [`participants.${L.people - 1}`]: { $exists: false } }
+    : {};
   const r = await Draw.updateOne(
-    { _id: req.params.id, status: 'open' },
+    { _id: req.params.id, status: 'open', ...roomLeft },
     { $addToSet: { participants: req.user._id } }
   );
-  if (!r.matchedCount)
-    return fail(res, 409, '참여를 받는 중인 추첨이 아니에요');
+  if (!r.matchedCount) {
+    const full = L && target.status === 'open' && members.length >= L.people;
+    return fail(
+      res,
+      409,
+      full ? fullMsg(L) : '참여를 받는 중인 추첨이 아니에요'
+    );
+  }
   res.json({ ok: true });
 };
 
@@ -218,6 +257,9 @@ const close = async (req, res) => {
   if (!cur) return fail(res, 404, '추첨을 찾을 수 없어요');
   if (!canManage(req, cur)) return fail(res, 403, NOT_MANAGER);
   if (cur.status !== 'open') return fail(res, 409, '이미 마감된 추첨이에요');
+  const L = LIMITS[cur.style];
+  if (L && cur.participants.length > L.people)
+    return fail(res, 400, fullMsg(L));
   if (cur.participants.length < cur.winnerCount)
     return fail(
       res,
@@ -277,12 +319,15 @@ const run = async (req, res) => {
     const nick = new Map(users.map((u) => [String(u._id), u.nickname]));
     const snap = (id) => ({ id, nickname: nick.get(id) || '(탈퇴)' });
 
-    // 구슬 레이스는 물리 엔진이 승자를 정한다. 그 외 연출은 seed 로 섞어서 뽑는다.
-    const isRace = d.style === 'marbles';
+    // 구슬 레이스, 로또 추첨기, 룰렛은 물리 엔진이 승자를 정한다. 그 외 연출은 seed 로 섞어서 뽑는다.
+    // 한도가 생기기 전에 만든 룰렛 추첨처럼 기계에 다 들어가지 않으면 예전 방식(seed 로 섞기)으로 뽑는다
+    const L = LIMITS[d.style];
+    const fits = !L || (ids.length <= L.people && d.winnerCount <= L.winners);
+    const engine = fits ? PHYSICS[d.style] : null;
     let winnerIds;
     let physics = {};
-    if (isRace) {
-      const sim = race.simulate({
+    if (engine) {
+      const sim = await engine.simulate({
         seed: d.seed,
         n: ids.length,
         winnerCount: d.winnerCount,
@@ -308,7 +353,7 @@ const run = async (req, res) => {
         participantsHash: d.participantsHash,
         commitment: d.commitment,
         seed: d.seed,
-        algo: isRace ? race.ALGO : ALGO,
+        algo: engine ? engine.ALGO : ALGO,
         winnerCount: d.winnerCount,
         winners: winnerIds.map(snap),
         drawnAt: new Date().toISOString(),
@@ -335,7 +380,12 @@ const run = async (req, res) => {
 };
 
 // 물리 결과 검증: 같은 seed 로 시뮬레이션을 처음부터 다시 돌려 녹화가 한 글자도 다르지 않은지 확인한다
-async function verifyRaceResult(r, prev) {
+const ORDER_LABEL = {
+  [race.ALGO]: '당첨자가 녹화에 담긴 결승선 도착 순서와 일치',
+  [lotto.ALGO]: '당첨자가 녹화에 담긴, 구멍으로 뽑혀 나온 순서와 일치',
+  [roulette.ALGO]: '당첨자가 녹화에 담긴, 공이 멈춘 칸의 주인 순서와 일치',
+};
+async function verifyPhysicsResult(r, prev, engine) {
   const ids = r.participants.map((p) => p.id);
   const sorted = [...ids].sort();
   const rec = await RaceRecording.findOne({ draw: r.draw });
@@ -353,12 +403,14 @@ async function verifyRaceResult(r, prev) {
     }
     // 결과에 기록된 엔진/트랙 버전 그대로 다시 돌린다 (물리 조건을 바꾼 뒤에도 옛 결과가 계속 검증되도록)
     resimSame =
-      race.simulate({
-        seed: r.seed,
-        n: sorted.length,
-        winnerCount: r.winnerCount,
-        version: race.versionOf(r.engine),
-      }).raw === raw;
+      (
+        await engine.simulate({
+          seed: r.seed,
+          n: sorted.length,
+          winnerCount: r.winnerCount,
+          version: engine.versionOf(r.engine),
+        })
+      ).raw === raw;
   }
   return [
     [
@@ -374,7 +426,7 @@ async function verifyRaceResult(r, prev) {
       '저장된 녹화의 해시가 결과에 기록된 값과 일치',
       !!rec && sha256(raw) === r.recordingHash && rec.hash === r.recordingHash,
     ],
-    ['당첨자가 녹화에 담긴 결승선 도착 순서와 일치', winnersMatch],
+    [ORDER_LABEL[r.algo], winnersMatch],
     [
       '같은 seed 로 물리 시뮬레이션을 다시 돌려도 똑같은 녹화가 나옴',
       resimSame,
@@ -387,7 +439,7 @@ async function verifyRaceResult(r, prev) {
   ].map(([label, ok]) => ({ label, ok }));
 }
 
-// 구슬 레이스 녹화 (참여자/관리자만)
+// 물리 연출(구슬 레이스, 로또 추첨기) 녹화 (참여자/관리자만)
 const recording = async (req, res) => {
   const d = await findDrawForMember(req, res);
   if (!d) return;
@@ -403,10 +455,10 @@ const verify = async (req, res) => {
   const r = await DrawResult.findOne({ draw: d._id });
   if (!r) return fail(res, 404, '아직 추첨 결과가 없어요');
   const prev = r.seq > 1 ? await DrawResult.findOne({ seq: r.seq - 1 }) : null;
-  const checks =
-    r.algo === race.ALGO
-      ? await verifyRaceResult(r, prev)
-      : verifyResult(r, prev);
+  const engine = ENGINES.find((e) => e.ALGO === r.algo);
+  const checks = engine
+    ? await verifyPhysicsResult(r, prev, engine)
+    : verifyResult(r, prev);
   res.json({ ok: checks.every((c) => c.ok), checks });
 };
 

@@ -5,6 +5,11 @@ const hex = (buf) =>
   [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 
 export const RACE_ALGO = 'matter-physics-v1';
+export const LOTTO_ALGO = 'rapier-lotto-v1';
+export const ROULETTE_ALGO = 'rapier-roulette-v1';
+// 물리 엔진이 당첨자를 정하는 방식: 경기 녹화를 따로 받아서 재생·검증한다
+export const isPhysicsAlgo = (algo) =>
+  algo === RACE_ALGO || algo === LOTTO_ALGO || algo === ROULETTE_ALGO;
 export const canVerify = () => typeof crypto !== 'undefined' && !!crypto.subtle;
 export const sha256 = async (s) =>
   hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
@@ -179,12 +184,128 @@ async function raceChecks(r, sorted, raw) {
   ];
 }
 
+/* ---------- 로또 추첨기(물리) ---------- */
+// 물리 시뮬레이션 자체는 서버 검증에서 다시 돌린다. 여기서는 녹화가 결과와 모순되지 않는지 확인한다.
+async function lottoChecks(r, sorted, raw) {
+  if (!raw) return [['추첨 녹화를 불러오지 못했어요', false]];
+  let rec;
+  try {
+    rec = JSON.parse(raw);
+  } catch {
+    return [['추첨 녹화가 올바른 형식이 아니에요', false]];
+  }
+  const n = sorted.length;
+  const shapeOk =
+    rec.kind === 'lotto' &&
+    rec.n === n &&
+    Array.isArray(rec.pos) &&
+    rec.pos.length === n &&
+    rec.pos.every((p) => p.length === rec.frames * 3);
+
+  // 뽑혔다고 기록된 순간, 그 공이 실제로 배출관 안에 있었는가
+  let captureOk =
+    shapeOk &&
+    Array.isArray(rec.captures) &&
+    rec.captures.length === rec.winnerCount &&
+    new Set(rec.captures.map(([i]) => i)).size === rec.captures.length &&
+    JSON.stringify(rec.captures.map(([i]) => i)) === JSON.stringify(rec.order);
+  if (captureOk) {
+    const { holeY, holeR } = rec.layout;
+    captureOk = rec.captures.every(([i, frame]) => {
+      let x = 0,
+        y = 0,
+        z = 0;
+      for (let f = 0; f <= frame; f++) {
+        x += rec.pos[i][f * 3];
+        y += rec.pos[i][f * 3 + 1];
+        z += rec.pos[i][f * 3 + 2];
+      }
+      return y / 1000 > holeY - 0.3 && Math.hypot(x, z) / 1000 < holeR + 0.3;
+    });
+  }
+  const winnersOk =
+    captureOk &&
+    JSON.stringify(rec.order.slice(0, r.winnerCount).map((i) => sorted[i])) ===
+      JSON.stringify(r.winners.map((w) => w.id));
+
+  return [
+    [
+      '저장된 녹화의 해시가 결과에 기록된 값과 같아요',
+      (await sha256(raw)) === r.recordingHash,
+    ],
+    ['녹화에서 공이 배출관으로 뽑힌 순간과 순서가 맞아요', captureOk],
+    ['당첨자가 뽑힌 순서의 앞에서부터와 같아요', winnersOk],
+  ];
+}
+
+/* ---------- 룰렛(물리) ---------- */
+// 녹화에서 공이 멈췄다고 기록된 순간, 공의 위치와 휠 각도로 칸을 다시 계산해 주인이 당첨자와 같은지 확인한다
+async function rouletteChecks(r, sorted, raw) {
+  if (!raw) return [['추첨 녹화를 불러오지 못했어요', false]];
+  let rec;
+  try {
+    rec = JSON.parse(raw);
+  } catch {
+    return [['추첨 녹화가 올바른 형식이 아니에요', false]];
+  }
+  const n = sorted.length;
+  const L = rec.layout || {};
+  let settleOk =
+    rec.kind === 'roulette' &&
+    rec.n === n &&
+    Array.isArray(rec.rounds) &&
+    rec.rounds.length === rec.winnerCount &&
+    Array.isArray(L.owner) &&
+    L.owner.length === L.P &&
+    rec.ball.length === rec.frames * 3 &&
+    rec.wheel.length === rec.frames &&
+    JSON.stringify(rec.rounds.map((x) => x.winner)) ===
+      JSON.stringify(rec.order) &&
+    new Set(rec.order).size === rec.order.length;
+  if (settleOk) {
+    const TAU = Math.PI * 2;
+    settleOk = rec.rounds.every((round) => {
+      let x = 0,
+        y = 0,
+        z = 0,
+        a = 0;
+      for (let f = 0; f <= round.settle; f++) {
+        x += rec.ball[f * 3];
+        y += rec.ball[f * 3 + 1];
+        z += rec.ball[f * 3 + 2];
+        a += rec.wheel[f];
+      }
+      const rad = Math.hypot(x, z) / 1000;
+      const local = (((Math.atan2(z, x) + a / 1e4) % TAU) + TAU) % TAU;
+      const p = Math.min(L.P - 1, Math.floor(local / (TAU / L.P)));
+      return (
+        rad > L.pocketIn &&
+        rad < L.pocketOut &&
+        y / 1000 < L.rimY &&
+        p === round.pocket &&
+        L.owner[p] === round.winner
+      );
+    });
+  }
+  const winnersOk =
+    settleOk &&
+    JSON.stringify(rec.order.slice(0, r.winnerCount).map((i) => sorted[i])) ===
+      JSON.stringify(r.winners.map((w) => w.id));
+  return [
+    [
+      '저장된 녹화의 해시가 결과에 기록된 값과 같아요',
+      (await sha256(raw)) === r.recordingHash,
+    ],
+    ['녹화에서 공이 멈춘 칸과 그 칸의 주인이 맞아요', settleOk],
+    ['당첨자가 공이 멈춘 순서와 같아요', winnersOk],
+  ];
+}
+
 // chain: /api/results 의 results 배열 (없으면 체인 연결 검사는 생략)
-// recordingRaw: 구슬 레이스일 때 /api/draws/:id/recording 의 raw 문자열
+// recordingRaw: 물리 방식(구슬 레이스, 로또 추첨기)일 때 /api/draws/:id/recording 의 raw 문자열
 export async function verifyInBrowser(r, drawId, chain, recordingRaw) {
   const ids = r.participants.map((p) => p.id);
   const sorted = [...ids].sort();
-  const isRace = r.algo === RACE_ALGO;
   const payload = {
     seq: r.seq,
     drawId,
@@ -216,8 +337,12 @@ export async function verifyInBrowser(r, drawId, chain, recordingRaw) {
         JSON.stringify(ids) === JSON.stringify(sorted),
     ],
   ];
-  if (isRace) {
+  if (r.algo === RACE_ALGO) {
     checks.push(...(await raceChecks(r, sorted, recordingRaw)));
+  } else if (r.algo === LOTTO_ALGO) {
+    checks.push(...(await lottoChecks(r, sorted, recordingRaw)));
+  } else if (r.algo === ROULETTE_ALGO) {
+    checks.push(...(await rouletteChecks(r, sorted, recordingRaw)));
   } else {
     const redo = await pickWinners(sorted, r.winnerCount, r.seed);
     checks.push([
