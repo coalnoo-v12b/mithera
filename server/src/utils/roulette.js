@@ -1,7 +1,7 @@
 // 카지노 룰렛: 물리 엔진(Rapier 3D)이 당첨자를 정한다.
 // 휠(칸막이와 칸이 있는 회전판)이 돌고, 바깥 트랙에 반대 방향으로 굴린 공이 속도를 잃으면서 경사를 타고 내려와
 // 다이아몬드(범퍼)에 튕기고 칸막이 사이를 오가다가 한 칸에 멈춘다. 그 칸의 주인이 당첨이다.
-// 여러 명을 뽑을 때는 당첨된 사람의 칸을 모두 덮개로 막고 공을 다시 굴린다.
+// 여러 명을 뽑을 때는 v1, v2 는 당첨된 사람의 칸을 덮개로 막고, v3 부터는 남은 사람끼리 칸을 똑같이 다시 나눈 뒤 공을 다시 굴린다.
 // seed 는 칸 배치, 휠 속도, 공을 던지는 위치와 세기에만 쓰이고, 그 뒤로는 물리 법칙만 작용한다.
 // 같은 seed + 같은 엔진/버전이면 항상 같은 녹화가 나와야 하므로 Math.random 이나 시간을 쓰지 않는다.
 const crypto = require('crypto');
@@ -68,7 +68,17 @@ VERSIONS['roulette-v2'] = {
   fretBounce: 0.7,
   deflectorBounce: 0.95,
 };
-const LATEST = 'roulette-v2';
+// v3: 휠은 추첨 내내 한 가지 속도로 돈다 (판마다 속도가 바뀌면 화면에서 휠이 뚝뚝 끊겨 보임).
+// 속도는 seed 로 한 번만 정하고, 판마다 다른 건 공을 던지는 위치·세기·안쪽 각도뿐이다.
+VERSIONS['roulette-v3'] = {
+  ...VERSIONS['roulette-v2'],
+  spin: [0.8, 1.4],
+  constantSpin: true,
+  repaint: true,
+  // 칸 밖(덮개 위 등)에서 휠과 함께 1.5초 넘게 멈춰 있으면 안쪽 위로 살짝 튕겨 준다 (모든 판에 같은 규칙)
+  unstickSeconds: 1.5,
+};
+const LATEST = 'roulette-v3';
 const RAPIER_VERSION = JSON.parse(
   fs.readFileSync(
     path.join(
@@ -276,20 +286,25 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
     );
     const fretLen = (V.pocketOut - V.pocketIn) / 2;
     const fretMid = (V.pocketOut + V.pocketIn) / 2;
-    for (let p = 0; p < P; p++) {
-      const a = (p / P) * TAU;
-      add(
-        RAPIER.ColliderDesc.cuboid(fretLen, V.fretH / 2, 0.015)
-          .setTranslation(
-            Math.cos(a) * fretMid,
-            V.floorOutY + V.fretH / 2,
-            Math.sin(a) * fretMid
-          )
-          .setRotation(yRot(-a))
-          .setRestitution(V.fretBounce)
-          .setFriction(0.2)
-      );
-    }
+    const addFrets = (count) =>
+      Array.from({ length: count }, (_, p) => {
+        const a = (p / count) * TAU;
+        return add(
+          RAPIER.ColliderDesc.cuboid(fretLen, V.fretH / 2, 0.015)
+            .setTranslation(
+              Math.cos(a) * fretMid,
+              V.floorOutY + V.fretH / 2,
+              Math.sin(a) * fretMid
+            )
+            .setRotation(yRot(-a))
+            .setRestitution(V.fretBounce)
+            .setFriction(0.2)
+        );
+      });
+    let frets = addFrets(P);
+    // 지금 판의 칸 수와 주인 (v3 부터는 판마다 남은 사람끼리 칸을 다시 나눈다)
+    let curP = P;
+    let curOwner = owner;
 
     const ball = world.createRigidBody(
       RAPIER.RigidBodyDesc.dynamic()
@@ -344,11 +359,21 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
     const order = [];
     let step = 0;
 
+    // v3 부터: 휠 속도를 처음에 한 번만 정한다 (v1, v2 는 판마다 정하므로 난수를 여기서 쓰지 않음)
+    const fixedOmega = V.constantSpin
+      ? V.spin[0] + rng() * (V.spin[1] - V.spin[0])
+      : null;
+    if (fixedOmega !== null)
+      wheel.setAngvel({ x: 0, y: fixedOmega, z: 0 }, true);
+
     const launch = (round) => {
       const phi = rng() * TAU;
       const [lo, hi] = round === 0 ? V.launch : V.launchNext;
       const speed = lo + rng() * (hi - lo);
-      const omega = V.spin[0] + rng() * (V.spin[1] - V.spin[0]);
+      const omega =
+        fixedOmega !== null
+          ? fixedOmega
+          : V.spin[0] + rng() * (V.spin[1] - V.spin[0]);
       // v2 부터: 판마다 안쪽으로 살짝 던지는 정도가 달라서 트랙을 도는 시간이 달라진다 (v1 은 난수를 더 쓰지 않음)
       const inward = V.launchInward
         ? V.launchInward[0] + rng() * (V.launchInward[1] - V.launchInward[0])
@@ -374,8 +399,24 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
       wheel.setAngvel({ x: 0, y: omega, z: 0 }, true);
     };
 
-    let pending = null; // 직전 판의 당첨자 칸을 덮을 차례
+    let pending = null; // 직전 판의 당첨자 칸을 덮을 차례 (v1, v2)
     for (let round = 0; round < winnerCount; round++) {
+      if (V.repaint && round > 0) {
+        // 당첨된 사람을 빼고 남은 사람끼리 칸을 똑같이 다시 나눈다. 칸막이도 새 칸 수에 맞게 다시 세운다.
+        const left = Array.from({ length: n }, (_, i) => i).filter(
+          (i) => !order.includes(i)
+        );
+        const m = left.length;
+        const mkeys = left.map(() => rng());
+        const mperm = left
+          .map((i, k) => k)
+          .sort((a, b) => mkeys[a] - mkeys[b] || a - b)
+          .map((k) => left[k]);
+        curP = pocketCount(m);
+        curOwner = Array.from({ length: curP }, (_, p) => mperm[p % m]);
+        for (const c of frets) world.removeCollider(c, true);
+        frets = addFrets(curP);
+      }
       if (pending) {
         for (const p of pending) {
           add(RAPIER.ColliderDesc.convexHull(lidPoints(p, P, V)));
@@ -387,6 +428,7 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
       const startFrame = frames;
       record();
       let calm = 0;
+      let stuck = 0;
       let settled = null;
       const startStep = step;
       while (step - startStep < V.maxRoundSeconds * HZ) {
@@ -411,24 +453,39 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
         const inPocket =
           r > V.pocketIn && r < V.pocketOut && t.y < V.rimY - 0.02;
         calm = inPocket && rel < V.settleSpeed ? calm + 1 : 0;
+        if (V.unstickSeconds) {
+          stuck = !inPocket && rel < V.settleSpeed ? stuck + 1 : 0;
+          if (stuck >= V.unstickSeconds * HZ) {
+            ball.applyImpulse(
+              {
+                x: (-t.x / (r || 1)) * 0.08,
+                y: 0.1,
+                z: (-t.z / (r || 1)) * 0.08,
+              },
+              true
+            );
+            stuck = 0;
+          }
+        }
         if (step % SAMPLE === 0) record();
         if (calm >= V.settleSeconds * HZ) {
           const local =
             (((Math.atan2(t.z, t.x) + trackAngle()) % TAU) + TAU) % TAU;
-          const p = Math.min(P - 1, Math.floor(local / (TAU / P)));
+          const p = Math.min(curP - 1, Math.floor(local / (TAU / curP)));
           settled = { p, frame: frames };
           break;
         }
       }
       if (!settled || lidded.has(settled.p))
         throw new Error('제한 시간 안에 공이 칸에 멈추지 않았어요');
-      const who = owner[settled.p];
+      const who = curOwner[settled.p];
       order.push(who);
       rounds.push({
         start: startFrame,
         settle: settled.frame,
         pocket: settled.p,
         winner: who,
+        ...(V.repaint ? { P: curP, owner: curOwner } : {}),
       });
       // 잠깐 멈춘 모습을 보여준 뒤 다음 판
       for (let k = 0; k < V.holdSeconds * HZ; k++) {
@@ -436,7 +493,10 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
         step++;
         if (step % SAMPLE === 0) record();
       }
-      pending = owner.map((o, p) => (o === who ? p : -1)).filter((p) => p >= 0);
+      if (!V.repaint)
+        pending = owner
+          .map((o, p) => (o === who ? p : -1))
+          .filter((p) => p >= 0);
     }
 
     const recording = {

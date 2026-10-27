@@ -65,15 +65,18 @@ describe('카지노 룰렛 물리 시뮬레이션', () => {
         a += rec.wheel[f];
       }
       const local = (((Math.atan2(z, x) + a / 1e4) % TAU) + TAU) % TAU;
-      const p = Math.min(L.P - 1, Math.floor(local / (TAU / L.P)));
+      // v3 부터는 판마다 칸을 다시 나누므로 그 판의 칸 수·주인을 쓴다
+      const P = round.P || L.P;
+      const owner = round.owner || L.owner;
+      const p = Math.min(P - 1, Math.floor(local / (TAU / P)));
       expect(p).toBe(round.pocket);
-      expect(L.owner[p]).toBe(round.winner);
+      expect(owner[p]).toBe(round.winner);
     }
   });
 
-  it('새 추첨은 v2 로 돌고, 옛 결과의 v1 도 그대로 다시 돌릴 수 있다', async () => {
-    expect(sim.engine).toMatch(/ roulette-v2 /);
-    expect(roulette.versionOf(sim.engine)).toBe('roulette-v2');
+  it('새 추첨은 v3 로 돌고, 옛 결과의 v1 도 그대로 다시 돌릴 수 있다', async () => {
+    expect(sim.engine).toMatch(/ roulette-v3 /);
+    expect(roulette.versionOf(sim.engine)).toBe('roulette-v3');
     const old = 'rapier3d-compat@0.19.2 roulette-v1 dt=8.333ms';
     expect(roulette.versionOf(old)).toBe('roulette-v1');
     const v1 = await roulette.simulate({
@@ -84,6 +87,20 @@ describe('카지노 룰렛 물리 시뮬레이션', () => {
     });
     expect(JSON.parse(v1.raw).version).toBe('roulette-v1');
     expect(v1.raw).not.toBe(sim.raw);
+  });
+
+  it('v3 는 판마다 남은 사람끼리 칸을 똑같이 다시 나눈다', () => {
+    rec.rounds.forEach((round, k) => {
+      const left = 8 - k;
+      expect(round.P).toBe(roulette.pocketCount(left));
+      const per = {};
+      round.owner.forEach((o) => {
+        per[o] = (per[o] || 0) + 1;
+      });
+      expect(Object.keys(per)).toHaveLength(left);
+      expect(new Set(Object.values(per)).size).toBe(1);
+      rec.order.slice(0, k).forEach((won) => expect(per[won]).toBeUndefined());
+    });
   });
 
   it('인원과 당첨 한도를 넘으면 거절한다', async () => {
@@ -167,7 +184,7 @@ describe('룰렛 추첨 실행과 검증 (DB 는 메모리 흉내)', () => {
 
     const r = store.result;
     expect(r.algo).toBe(roulette.ALGO);
-    expect(r.engine).toMatch(/roulette-v2/);
+    expect(r.engine).toMatch(/roulette-v3/);
     expect(r.recordingHash).toBe(sha256(store.rec.raw));
     const rec = JSON.parse(store.rec.raw);
     const sorted = [...ids].sort();

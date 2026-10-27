@@ -7,7 +7,7 @@ const RouletteStage = lazy(() => import('../roulette/RouletteStage.jsx'));
 const chipColor = () => '#d4a52c';
 
 // 서버의 물리 엔진(Rapier)이 끝까지 돌려서 저장한 룰렛 녹화를 재생한다.
-// 공이 멈춘 칸의 주인이 당첨이고, 여러 명이면 당첨된 칸을 덮고 다시 굴린다. 화면은 녹화를 보여줄 뿐이다.
+// 공이 멈춘 칸의 주인이 당첨이고, 여러 명이면 남은 사람끼리 칸을 다시 나눠 다시 굴린다. 화면은 녹화를 보여줄 뿐이다.
 export default function Roulette(props) {
   return (
     <Show3D

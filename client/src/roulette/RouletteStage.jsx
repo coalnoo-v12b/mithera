@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Environment, Lightformer, OrbitControls } from '@react-three/drei';
-import { Bloom, EffectComposer } from '@react-three/postprocessing';
 import { clampPan } from '../three/clampPan.js';
 import { clack, loop } from '../sfx.js';
 
 // 서버의 물리 엔진이 이미 끝까지 돌려 저장한 룰렛 녹화를 3D 로 재생한다.
 // 휠 각도와 공 위치를 녹화 그대로 보여줄 뿐, 당첨자를 정하지 않는다.
 // 좌표와 치수는 녹화의 layout 에 담긴 서버 값(server/src/utils/roulette.js)을 그대로 쓴다.
+// 휠이 끊김 없이 돌아 보이도록 그리기 비용이 큰 실시간 그림자와 후처리(빛 번짐)는 쓰지 않는다.
 
 const TAU = Math.PI * 2;
 const v2 = (r, y) => new THREE.Vector2(r, y);
@@ -30,16 +30,12 @@ function Playhead({ rec, playRef, speedRef, eventsRef }) {
   useFrame((_, dt) => {
     const p = playRef.current;
     if (!p.playing || p.done) return;
-    // 공이 칸에 들어가기 직전에는 슬로모션 (당첨 인원이 적으면 매 판, 많으면 마지막 판만)
-    const next = rec.rounds[p.won];
-    const slowAll = rec.winnerCount <= 3;
-    const slow =
-      next &&
-      (slowAll || p.won === rec.rounds.length - 1) &&
-      next.settle - p.f < rec.fps * 2.4 &&
-      next.settle - p.f > 0;
-    const sp = speedRef.current * (slow ? 0.5 : 1);
-    p.f = Math.min(rec.frames - 1, p.f + Math.min(dt, 0.1) * rec.fps * sp);
+    // 룰렛은 슬로모션을 쓰지 않는다: 재생을 느리게 하면 휠까지 느려져 보여서, 휠이 늘 같은 속도로 돌게 한다.
+    // 화면이 잠깐 멈춰도(프레임 지연) 그만큼의 시간을 그대로 반영해 휠 속도가 흐트러지지 않게 한다.
+    p.f = Math.min(
+      rec.frames - 1,
+      p.f + Math.min(dt, 0.5) * rec.fps * speedRef.current
+    );
     while (p.won < rec.rounds.length && rec.rounds[p.won].settle <= p.f) {
       eventsRef.current.onArrive(p.won, rec.rounds[p.won].winner);
       p.won++;
@@ -61,18 +57,33 @@ const lerpAt = (arr, f, stride, k) => {
   );
 };
 
+// 판이 바뀔 때 서버는 공을 칸에서 트랙의 던지는 자리로 옮긴다 (한 프레임 만에 순간이동).
+// 그 사이를 이어 그리면 공이 휠을 가로질러 날아가 보여서, 직전에 칸 안에서 작아졌다가 던지는 자리에서 커지게 한다.
+const POP = 6; // 프레임 (약 0.2초)
 function Ball({ rec, decoded, playRef }) {
   const ref = useRef();
+  const starts = useMemo(() => rec.rounds.slice(1).map((r) => r.start), [rec]);
   useFrame(() => {
     const f = playRef.current.f;
+    let scale = 1;
+    let at = f;
+    for (const s of starts) {
+      if (f >= s - POP && f < s) {
+        scale = (s - f) / POP;
+        at = Math.min(f, s - 1); // 순간이동한 프레임과 섞지 않는다
+      } else if (f >= s && f < s + POP) {
+        scale = (f - s) / POP;
+      }
+    }
     ref.current.position.set(
-      lerpAt(decoded.ball, f, 3, 0),
-      lerpAt(decoded.ball, f, 3, 1),
-      lerpAt(decoded.ball, f, 3, 2)
+      lerpAt(decoded.ball, at, 3, 0),
+      lerpAt(decoded.ball, at, 3, 1),
+      lerpAt(decoded.ball, at, 3, 2)
     );
+    ref.current.scale.setScalar(Math.max(0.001, scale));
   });
   return (
-    <mesh ref={ref} castShadow>
+    <mesh ref={ref}>
       <sphereGeometry args={[rec.layout.ballR, 32, 24]} />
       <meshPhysicalMaterial
         color="#fbfbf6"
@@ -87,16 +98,14 @@ function Ball({ rec, decoded, playRef }) {
 /* ---------------- 휠(회전판) ---------------- */
 
 // 칸 바닥 그림: 빨강/검정 칸과 주인 이름. 캔버스 오른쪽이 +x, 아래쪽이 +z 인 위에서 본 그림이다.
-function pocketTexture(L, names) {
-  const S = 2048;
-  const c = document.createElement('canvas');
-  c.width = S;
-  c.height = S;
-  const g = c.getContext('2d');
+function drawPockets(canvas, L, P, owner, names) {
+  const S = canvas.width;
+  const g = canvas.getContext('2d');
+  g.clearRect(0, 0, S, S);
   const k = S / 2 / L.pocketOut;
   const cx = S / 2;
-  const step = TAU / L.P;
-  for (let p = 0; p < L.P; p++) {
+  const step = TAU / P;
+  for (let p = 0; p < P; p++) {
     const a0 = p * step;
     const a1 = a0 + step;
     g.beginPath();
@@ -115,8 +124,8 @@ function pocketTexture(L, names) {
   g.textBaseline = 'middle';
   g.font = `700 ${size}px "Pretendard", "Malgun Gothic", sans-serif`;
   const maxLen = (L.pocketOut - L.pocketIn) * k * 0.86;
-  for (let p = 0; p < L.P; p++) {
-    let name = names[L.owner[p]] || '';
+  for (let p = 0; p < P; p++) {
+    let name = names[owner[p]] || '';
     while (name.length > 1 && g.measureText(name).width > maxLen)
       name = name.slice(0, -1);
     const a = (p + 0.5) * step;
@@ -126,10 +135,18 @@ function pocketTexture(L, names) {
     g.fillText(name, 0, 0);
     g.restore();
   }
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
-  return tex;
+}
+
+// 판마다의 칸 배치. v3 부터는 판이 바뀔 때 남은 사람끼리 칸을 다시 나누므로 판마다 다르다.
+function pocketConfigs(rec) {
+  const L = rec.layout;
+  if (!rec.rounds.length || !rec.rounds[0].owner)
+    return [{ from: 0, P: L.P, owner: L.owner }];
+  return rec.rounds.map((r, k) => ({
+    from: k === 0 ? 0 : r.start,
+    P: r.P,
+    owner: r.owner,
+  }));
 }
 
 // 당첨된 사람의 칸을 덮는 금색 덮개 (휠 기준 각도 a0~a1)
@@ -155,8 +172,34 @@ function Lid({ L, p }) {
 function Wheel({ rec, decoded, names, playRef }) {
   const L = rec.layout;
   const ref = useRef();
-  const texture = useMemo(() => pocketTexture(L, names), [L, names]);
-  useEffect(() => () => texture.dispose(), [texture]);
+  const configs = useMemo(() => pocketConfigs(rec), [rec]);
+  const maxP = Math.max(...configs.map((c) => c.P));
+  // 판마다의 칸 그림을 재생 전에 모두 그려서 그래픽 카드에 올려 둔다.
+  // 판이 바뀔 때 그 자리에서 그리고 올리면 그 순간 화면이 뚝 끊긴다. (판이 여러 개면 1024px 로 메모리를 아낀다)
+  const { gl } = useThree();
+  const floorMat = useRef();
+  const tex = useRef([]);
+  const fretRefs = useRef([]);
+  const shown = useRef(-1);
+  useEffect(() => {
+    const size = configs.length > 1 ? 1024 : 2048;
+    const list = configs.map((c) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      drawPockets(canvas, L, c.P, c.owner, names);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = 8;
+      gl.initTexture(texture);
+      return texture;
+    });
+    tex.current = list;
+    floorMat.current.map = list[0];
+    floorMat.current.needsUpdate = true;
+    shown.current = -1;
+    return () => list.forEach((t) => t.dispose());
+  }, [configs, L, names, gl]);
   const rimGeo = useMemo(
     () =>
       new THREE.LatheGeometry(
@@ -206,25 +249,18 @@ function Wheel({ rec, decoded, names, playRef }) {
       [rimGeo, wallGeo, coneGeo, turretGeo].forEach((g) => g.dispose()),
     [rimGeo, wallGeo, coneGeo, turretGeo]
   );
-  const frets = useMemo(
-    () =>
-      Array.from({ length: L.P }, (_, p) => {
-        const a = (p / L.P) * TAU;
-        const mid = (L.pocketIn + L.pocketOut) / 2;
-        return { a, x: Math.cos(a) * mid, z: Math.sin(a) * mid };
-      }),
-    [L]
-  );
-  // 덮개는 다음 판을 굴리는 순간 생긴다 (서버와 같은 시점)
+  // v1, v2 녹화: 당첨된 사람의 칸은 다음 판을 굴리는 순간 덮개로 덮인다 (서버와 같은 시점)
   const lids = useMemo(
     () =>
-      rec.rounds.map((r, k) => ({
-        from: rec.rounds[k + 1] ? rec.rounds[k + 1].start : Infinity,
-        pockets: L.owner
-          .map((o, p) => (o === r.winner ? p : -1))
-          .filter((p) => p >= 0),
-      })),
-    [rec, L]
+      configs.length > 1
+        ? []
+        : rec.rounds.map((r, k) => ({
+            from: rec.rounds[k + 1] ? rec.rounds[k + 1].start : Infinity,
+            pockets: L.owner
+              .map((o, p) => (o === r.winner ? p : -1))
+              .filter((p) => p >= 0),
+          })),
+    [rec, L, configs]
   );
   const lidRefs = useRef([]);
 
@@ -235,13 +271,33 @@ function Wheel({ rec, decoded, names, playRef }) {
       const g = lidRefs.current[k];
       if (g) g.visible = f >= l.from;
     });
+    // 지금 판의 칸 배치로 바닥 그림과 칸막이를 바꾼다
+    let k = 0;
+    while (k + 1 < configs.length && configs[k + 1].from <= f) k++;
+    if (k !== shown.current && tex.current[k]) {
+      shown.current = k;
+      const c = configs[k];
+      floorMat.current.map = tex.current[k];
+      const mid = (L.pocketIn + L.pocketOut) / 2;
+      fretRefs.current.forEach((m, p) => {
+        if (!m) return;
+        m.visible = p < c.P;
+        const a = (p / c.P) * TAU;
+        m.position.set(
+          Math.cos(a) * mid,
+          L.floorOutY + L.fretH / 2,
+          Math.sin(a) * mid
+        );
+        m.rotation.set(0, -a, 0);
+      });
+    }
   });
 
   const mid = (L.pocketIn + L.pocketOut) / 2;
   const fretLen = L.pocketOut - L.pocketIn;
   return (
     <group ref={ref}>
-      <mesh geometry={rimGeo} receiveShadow>
+      <mesh geometry={rimGeo}>
         <meshPhysicalMaterial
           {...wood}
           color="#7a3b1c"
@@ -254,23 +310,22 @@ function Wheel({ rec, decoded, names, playRef }) {
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, (L.floorInY + L.floorOutY) / 2 + 0.01, 0]}
-        receiveShadow
       >
         <ringGeometry args={[L.pocketIn, L.pocketOut, 256, 1]} />
-        <meshStandardMaterial map={texture} roughness={0.5} />
+        <meshStandardMaterial ref={floorMat} roughness={0.5} />
       </mesh>
-      {frets.map(({ a, x, z }, p) => (
+      {Array.from({ length: maxP }, (_, p) => (
         <mesh
           key={p}
-          position={[x, L.floorOutY + L.fretH / 2, z]}
-          rotation={[0, -a, 0]}
-          castShadow
+          ref={(m) => {
+            fretRefs.current[p] = m;
+          }}
         >
           <boxGeometry args={[fretLen, L.fretH, 0.03]} />
           <meshStandardMaterial {...gold} />
         </mesh>
       ))}
-      <mesh geometry={coneGeo} receiveShadow>
+      <mesh geometry={coneGeo}>
         <meshPhysicalMaterial {...wood} side={THREE.DoubleSide} />
       </mesh>
       {/* 원뿔 위 장식 살 */}
@@ -292,7 +347,7 @@ function Wheel({ rec, decoded, names, playRef }) {
           </mesh>
         );
       })}
-      <mesh geometry={turretGeo} castShadow>
+      <mesh geometry={turretGeo}>
         <meshStandardMaterial {...gold} side={THREE.DoubleSide} />
       </mesh>
       <mesh
@@ -360,10 +415,10 @@ function Bowl({ rec }) {
   const deflY = L.trackOutY - slope * (L.trackOut - L.deflectorR);
   return (
     <group>
-      <mesh geometry={trackGeo} receiveShadow>
+      <mesh geometry={trackGeo}>
         <meshPhysicalMaterial {...darkWood} side={THREE.DoubleSide} />
       </mesh>
-      <mesh geometry={bodyGeo} castShadow receiveShadow>
+      <mesh geometry={bodyGeo}>
         <meshPhysicalMaterial {...wood} side={THREE.DoubleSide} />
       </mesh>
       <mesh
@@ -385,7 +440,6 @@ function Bowl({ rec }) {
             ]}
             rotation={[0, -a + Math.PI / 4, 0]}
             scale={[0.22, 0.09, 0.11]}
-            castShadow
           >
             <octahedronGeometry args={[1, 0]} />
             <meshStandardMaterial {...gold} />
@@ -399,11 +453,7 @@ function Bowl({ rec }) {
 function Table() {
   return (
     <group>
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, -1.0, 0]}
-        receiveShadow
-      >
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.0, 0]}>
         <planeGeometry args={[40, 40]} />
         <meshStandardMaterial color="#0f4a38" roughness={0.95} />
       </mesh>
@@ -462,6 +512,9 @@ function Sounds({ rec, decoded, playRef }) {
       roll.set(0);
       return;
     }
+    const nearJump = rec.rounds.some(
+      (r, k) => k > 0 && f0 >= r.start - 2 && f0 <= r.start + 2
+    );
     const b = decoded.ball;
     const at = (f) => [b[f * 3], b[f * 3 + 1], b[f * 3 + 2]];
     const [x0, y0, z0] = at(f0 - 1);
@@ -475,8 +528,8 @@ function Sounds({ rec, decoded, playRef }) {
     const vz = (z2 - z1) * rec.fps + (onWheel ? w * x1 : 0);
     const vy = (y2 - y1) * rec.fps;
     const speed = Math.hypot(vx, vy, vz);
-    roll.set(Math.min(1, speed / 9), Math.min(1, speed / 14));
-    if (f0 !== lastFrame.current) {
+    roll.set(nearJump ? 0 : Math.min(1, speed / 9), Math.min(1, speed / 14));
+    if (f0 !== lastFrame.current && !nearJump) {
       lastFrame.current = f0;
       const ax = x1 - x0;
       const ay = y1 - y0;
@@ -520,8 +573,7 @@ export default function RouletteStage({
 
   return (
     <Canvas
-      shadows
-      dpr={[1, 1.5]}
+      dpr={[1, 1.25]}
       camera={{ position: [0, 9, 8], fov: 36 }}
       gl={{ antialias: true, toneMappingExposure: 0.95 }}
     >
@@ -539,9 +591,6 @@ export default function RouletteStage({
         angle={0.55}
         penumbra={0.6}
         intensity={260}
-        castShadow
-        shadow-mapSize={[1024, 1024]}
-        shadow-bias={-0.0004}
       />
       <Environment resolution={256}>
         <Lightformer
@@ -578,9 +627,6 @@ export default function RouletteStage({
       <Sounds rec={recording} decoded={decoded} playRef={playRef} />
 
       <CameraRig />
-      <EffectComposer multisampling={2}>
-        <Bloom mipmapBlur luminanceThreshold={1} intensity={0.4} radius={0.6} />
-      </EffectComposer>
     </Canvas>
   );
 }

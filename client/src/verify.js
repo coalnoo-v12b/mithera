@@ -277,13 +277,16 @@ async function rouletteChecks(r, sorted, raw) {
       }
       const rad = Math.hypot(x, z) / 1000;
       const local = (((Math.atan2(z, x) + a / 1e4) % TAU) + TAU) % TAU;
-      const p = Math.min(L.P - 1, Math.floor(local / (TAU / L.P)));
+      // v3 부터는 판마다 남은 사람끼리 칸을 다시 나누므로 그 판의 칸 수·주인을 쓴다
+      const P = round.P || L.P;
+      const owner = round.owner || L.owner;
+      const p = Math.min(P - 1, Math.floor(local / (TAU / P)));
       return (
         rad > L.pocketIn &&
         rad < L.pocketOut &&
         y / 1000 < L.rimY &&
         p === round.pocket &&
-        L.owner[p] === round.winner
+        owner[p] === round.winner
       );
     });
   }
