@@ -16,7 +16,9 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@dimforge/rapier3d-compat": "0.19.2",
     "bcryptjs": "^2.4.3",
+    "compression": "^1.8.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^18.0.9",

@@ -1,4 +1,5 @@
 const express = require('express');
+const compression = require('compression');
 const draw = require('../controllers/drawController');
 const { auth } = require('../middlewares/auth');
 const { joinLimiter, createLimiter } = require('../middlewares/rateLimit');
@@ -15,7 +16,8 @@ router.post('/:id/join', joinLimiter, draw.join);
 router.post('/:id/leave', draw.leave);
 router.post('/:id/close', draw.close);
 router.post('/:id/run', draw.run);
-router.get('/:id/recording', draw.recording);
+// 녹화는 수 MB 까지 커서 압축해서 보낸다 (Vercel 응답 크기 제한 4.5MB)
+router.get('/:id/recording', compression(), draw.recording);
 router.get('/:id/verify', draw.verify);
 
 module.exports = router;

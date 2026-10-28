@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { api, setUnauthorizedHandler } from './api.js';
 import { AppCtx } from './AppContext.js';
@@ -8,6 +15,14 @@ import List from './pages/List.jsx';
 import New from './pages/New.jsx';
 import Detail from './pages/Detail.jsx';
 import Admin from './pages/Admin.jsx';
+
+// 실험용 3D 화면. three.js가 커서 이 경로에 들어올 때만 불러옴
+const LottoLab = lazy(() => import('./lab/lotto/LottoLab.jsx'));
+const lab = (kind) => (
+  <Suspense fallback={null}>
+    <LottoLab key={kind} kind={kind} />
+  </Suspense>
+);
 
 export default function App() {
   const [me, setMe] = useState(undefined); // undefined: 확인 중, null: 로그아웃
@@ -41,12 +56,16 @@ export default function App() {
           <Route path="/new" element={<New />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/draw/:id" element={<Detail />} />
+          <Route path="/lab/lotto" element={lab('lotto')} />
+          <Route path="/lab/roulette" element={lab('roulette')} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       ) : (
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Auth />} />
+          <Route path="/lab/lotto" element={lab('lotto')} />
+          <Route path="/lab/roulette" element={lab('roulette')} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       )}

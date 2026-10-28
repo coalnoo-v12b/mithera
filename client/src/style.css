@@ -1075,6 +1075,32 @@ label {
 .st-ladder {
   animation: lp-climb 2.4s ease-in-out infinite;
 }
+.st-lotto {
+  animation: lp-roll 2s ease-in-out infinite;
+}
+.lp-style .lp-style-cap {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+}
+/* 새 추첨: 방식별 인원 안내 */
+.style-cap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  font-size: 13px;
+}
+.style-cap span {
+  color: var(--muted);
+}
+.style-cap .warn {
+  color: var(--bad);
+}
 
 .lp-verify {
   max-width: 640px;
@@ -1151,7 +1177,7 @@ label {
     min-height: 360px;
   }
   .lp-styles {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
 }
 
@@ -1207,4 +1233,110 @@ label {
   background: var(--grad);
   color: #fff;
   border-color: transparent;
+}
+
+/* 로또 추첨기 (3D 녹화 재생) */
+.lotto-stage {
+  position: relative;
+  height: 440px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #dfe6ef;
+  box-shadow: var(--shadow);
+}
+.stage-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.lotto-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #6b7285;
+}
+.lotto-count {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 110px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 6px 30px rgba(255, 106, 42, 0.6);
+  pointer-events: none;
+}
+.lotto-pop {
+  position: absolute;
+  left: 50%;
+  top: 14%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 28px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2a3346;
+  box-shadow: 0 12px 30px rgba(255, 120, 50, 0.25);
+  animation: lotto-pop 1.8s ease forwards;
+  pointer-events: none;
+}
+.lotto-pop span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ff8a3d;
+}
+.lotto-pop strong {
+  font-size: 30px;
+}
+@keyframes lotto-pop {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.7);
+  }
+  15% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.05);
+  }
+  25% {
+    transform: translateX(-50%) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.lotto-winners {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 10px;
+  font-size: 16px;
+}
+.lotto-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lotto-chip i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+@media (max-width: 600px) {
+  .lotto-stage {
+    height: 340px;
+  }
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, STYLE_LABEL } from '../api.js';
+import { api, STYLE_LABEL, capacityText } from '../api.js';
 import { useApp } from '../AppContext.js';
 import Logo from '../components/Logo.jsx';
 import { isDark, setTheme } from '../theme.js';
@@ -24,10 +24,11 @@ const STEPS = [
 ];
 
 const STYLE_TEXT = {
-  wheel: '룰렛이 돌아가며 당첨자를 가려요',
+  wheel: '돌아가는 휠 위에서 공이 멈춘 칸의 주인이 당첨돼요',
   cards: '뒤집힌 카드가 한 장씩 열려요',
   marbles: '물리 엔진 위에서 구슬이 결승선으로 달려요',
   ladder: '사다리를 타고 내려가 결과에 도착해요',
+  lotto: '바람에 섞인 공 중 구멍으로 먼저 올라온 공이 당첨돼요',
 };
 
 const CHECKS = [
@@ -235,7 +236,10 @@ export default function Landing() {
 
       <section className="lp-wrap lp-sec">
         <h2>보는 재미도 놓치지 않아요</h2>
-        <p className="lead">추첨 방식은 네 가지 중에서 골라요.</p>
+        <p className="lead">
+          추첨 방식은 다섯 가지예요. 인원에 맞는 방식을 고르면 연출이 더
+          자연스러워요.
+        </p>
         <div className="lp-styles">
           {Object.entries(STYLE_LABEL).map(([key, label]) => {
             const [icon, ...name] = label.split(' ');
@@ -244,6 +248,9 @@ export default function Landing() {
                 <span className={'lp-style-icon st-' + key}>{icon}</span>
                 <h3>{name.join(' ')}</h3>
                 <p>{STYLE_TEXT[key]}</p>
+                {capacityText(key) && (
+                  <p className="lp-style-cap">{capacityText(key)}</p>
+                )}
               </div>
             );
           })}

@@ -20,6 +20,10 @@ app.use('/api/draws', drawRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api', authRoutes);
 app.use('/api', resultRoutes);
+// 개발용 실험 화면. 배포(Vercel)에서는 열지 않는다.
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  app.use('/api/lab', require('./routes/labRoutes'));
+}
 
 app.use((req, res) => {
   res.status(404).json({ message: 'Not Found' });
