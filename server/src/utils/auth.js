@@ -43,10 +43,21 @@ function setAuthCookie(res, user) {
   });
 }
 
+// 마지막으로 로그인한 방식(email, google, naver)을 기억한다.
+// 로그인 정보가 아니라서 JavaScript에서 읽을 수 있게 httpOnly 를 쓰지 않는다.
+function markLastLogin(res, method) {
+  res.cookie('last_login', method, {
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 365 * 24 * 60 * 60 * 1000,
+  });
+}
+
 module.exports = {
   getJwtSecret,
   isAdminEmail,
   publicUser,
   syncUserType,
   setAuthCookie,
+  markLastLogin,
 };
