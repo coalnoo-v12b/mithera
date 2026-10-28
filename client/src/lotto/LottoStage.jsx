@@ -575,7 +575,7 @@ export default function LottoStage({
 
   return (
     <Canvas
-      shadows
+      shadows={{ type: THREE.PCFShadowMap }}
       dpr={[1, 1.5]}
       camera={{ position: [3, 3, 22], fov: 36 }}
       gl={{ antialias: true, toneMappingExposure: 0.85 }}
