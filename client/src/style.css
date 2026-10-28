@@ -202,6 +202,15 @@ label {
   display: grid;
   gap: 10px;
 }
+.auth .google-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.auth .google-btn svg {
+  width: 22px;
+  height: 22px;
+}
 @keyframes float {
   50% {
     transform: translateY(-6px);

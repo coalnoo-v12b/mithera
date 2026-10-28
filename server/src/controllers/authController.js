@@ -40,7 +40,12 @@ const login = async (req, res) => {
     .toLowerCase();
   const password = String(body.password || '');
   const user = await User.findOne({ email });
-  if (!user || !(await bcrypt.compare(password, user.passwordHash)))
+  // 소셜 전용 계정(비밀번호 없음)은 이메일 로그인을 할 수 없음
+  if (
+    !user ||
+    !user.passwordHash ||
+    !(await bcrypt.compare(password, user.passwordHash))
+  )
     return fail(res, 401, '이메일 또는 비밀번호가 맞지 않아요');
   await syncUserType(user);
   setAuthCookie(res, user);
