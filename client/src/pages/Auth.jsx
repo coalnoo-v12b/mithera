@@ -128,6 +128,18 @@ export default function Auth() {
           N
         </span>
       </a>
+      {/* 카카오 로그인은 준비 중: 버튼 모양만 두고 연결하지 않음 */}
+      <button
+        className="btn block kakao-btn"
+        type="button"
+        disabled
+        aria-label="카카오 로그인 준비 중"
+        title="카카오 로그인 준비 중"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M12 3C6.48 3 2 6.58 2 11c0 2.8 1.86 5.27 4.66 6.67L5.5 21.5l4.24-2.8c.73.1 1.48.15 2.26.15 5.52 0 10-3.58 10-8S17.52 3 12 3z" />
+        </svg>
+      </button>
       <button className="link" type="button" onClick={() => setSignup(!signup)}>
         {signup ? '이미 계정이 있어요 → 로그인' : '계정이 없어요 → 회원가입'}
       </button>

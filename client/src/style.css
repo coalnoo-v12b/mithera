@@ -220,6 +220,21 @@ label {
   color: #fff;
   font-weight: 700;
 }
+.auth .kakao-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #fee500;
+  border-color: #fee500;
+  color: #3c1e1e;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.auth .kakao-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: #3c1e1e;
+}
 .auth .naver-mark {
   display: inline-flex;
   align-items: center;
