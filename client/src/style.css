@@ -211,6 +211,27 @@ label {
   width: 22px;
   height: 22px;
 }
+.auth .naver-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #03c75a;
+  border-color: #03c75a;
+  color: #fff;
+  font-weight: 700;
+}
+.auth .naver-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: #fff;
+  color: #03c75a;
+  font-weight: 900;
+  font-size: 14px;
+}
 @keyframes float {
   50% {
     transform: translateY(-6px);
