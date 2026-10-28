@@ -202,6 +202,43 @@ label {
   display: grid;
   gap: 10px;
 }
+.auth .social-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+.auth .social-row .btn {
+  margin-top: 0;
+  position: relative;
+}
+.auth .last-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #16a34a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 2px var(--card);
+}
+/* 뱃지 색은 각 버튼 색과 맞춘다 */
+.auth .last-badge.google-badge {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+.auth .last-badge.naver-badge {
+  background: #03c75a;
+  color: #fff;
+}
 .auth .google-btn {
   display: flex;
   justify-content: center;

@@ -5,6 +5,7 @@ const {
   publicUser,
   syncUserType,
   setAuthCookie,
+  markLastLogin,
 } = require('../utils/auth');
 const { fail } = require('../utils/http');
 
@@ -30,6 +31,7 @@ const signup = async (req, res) => {
     user_type: isAdminEmail(email) ? 'admin' : 'user',
   });
   setAuthCookie(res, user);
+  markLastLogin(res, 'email');
   res.json({ user: publicUser(user) });
 };
 
@@ -49,6 +51,7 @@ const login = async (req, res) => {
     return fail(res, 401, '이메일 또는 비밀번호가 맞지 않아요');
   await syncUserType(user);
   setAuthCookie(res, user);
+  markLastLogin(res, 'email');
   res.json({ user: publicUser(user) });
 };
 

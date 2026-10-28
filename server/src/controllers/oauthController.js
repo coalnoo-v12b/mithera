@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const { User } = require('../models');
-const { isAdminEmail, setAuthCookie } = require('../utils/auth');
+const { isAdminEmail, setAuthCookie, markLastLogin } = require('../utils/auth');
 const { fail } = require('../utils/http');
 
 const STATE_COOKIE = 'oauth_state';
@@ -167,6 +167,7 @@ const finishLogin = (key) => async (req, res) => {
 
     const user = await findOrCreateSocialUser(key, profile);
     setAuthCookie(res, user);
+    markLastLogin(res, key);
     res.redirect(`${clientUrl()}/#/`);
   } catch (err) {
     console.error(err);
