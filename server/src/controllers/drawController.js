@@ -151,14 +151,11 @@ const list = async (req, res) => {
     Boolean
   );
   const filter = parts.length > 1 ? { $and: parts } : parts[0] || {};
-  const draws = await Draw.find(filter).sort({ createdAt: -1 }).limit(100);
+  const draws = await Draw.find(filter)
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .populate('createdBy', 'nickname');
   const uid = String(req.user._id);
-  // 만든 사람 닉네임은 한 번에 모아서 가져온다
-  const makerIds = [...new Set(draws.map((d) => String(d.createdBy)))];
-  const makers = makerIds.length
-    ? await User.find({ _id: { $in: makerIds } }, 'nickname')
-    : [];
-  const makerName = new Map(makers.map((u) => [String(u._id), u.nickname]));
   res.json({
     draws: draws.map((d) => ({
       id: String(d._id),
@@ -170,8 +167,8 @@ const list = async (req, res) => {
       drawAt: d.drawAt,
       participantCount: d.participants.length,
       joined: d.participants.some((p) => String(p) === uid),
-      mine: isOwner(req, d),
-      creator: makerName.get(String(d.createdBy)) || '(탈퇴)',
+      mine: String(d.createdBy?._id ?? d.createdBy) === uid,
+      creator: d.createdBy?.nickname ?? null,
       hasPassword: !!d.hasPassword,
       createdAt: d.createdAt,
     })),
