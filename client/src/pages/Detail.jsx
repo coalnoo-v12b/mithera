@@ -9,6 +9,7 @@ import {
   LOTTO_ALGO,
   ROULETTE_ALGO,
   RACE_ALGO,
+  SIEGE_ALGO,
 } from '../verify.js';
 import Layout from '../components/Layout.jsx';
 import Wheel from '../components/Wheel.jsx';
@@ -17,9 +18,11 @@ import Marbles from '../components/Marbles.jsx';
 import Ladder from '../components/Ladder.jsx';
 import Lotto from '../components/Lotto.jsx';
 import Roulette from '../components/Roulette.jsx';
+import Siege from '../components/Siege.jsx';
 import Countdown from '../components/Countdown.jsx';
 import ChainView from '../components/ChainView.jsx';
 import WinnerModal from '../components/WinnerModal.jsx';
+import ShowFrame from '../components/ShowFrame.jsx';
 
 export default function Detail() {
   const { id } = useParams();
@@ -195,6 +198,7 @@ export default function Detail() {
           marbles: Marbles,
           ladder: Ladder,
           lotto: Lotto,
+          siege: Siege,
         }[d.style] || Wheel;
   const live = d.status === 'drawing';
 
@@ -221,7 +225,7 @@ export default function Detail() {
         {d.description && <p>{d.description}</p>}
         <div className="muted">
           {STYLE_LABEL[d.style]} · 당첨 {d.winnerCount}명 · 참여{' '}
-          {d.participantCount}명
+          {d.participantCount}명 · ✍️ {d.creator} 개설
         </div>
         <div className="row between" style={{ marginTop: 6 }}>
           <span className="muted">🗓️ 추첨 예정 {fmt(d.drawAt)}</span>
@@ -310,30 +314,36 @@ export default function Detail() {
             )}
           </div>
           <div className="card">
-            {runKey > 0 ? (
-              isPhysics && !(rec && rec.data) ? (
-                <div className="empty">경기 기록을 불러오는 중…</div>
+            <ShowFrame
+              controls={
+                <>
+                  <button className="btn" onClick={replay}>
+                    ▶ 연출 다시 보기
+                  </button>
+                  <button className="btn" onClick={copyLink}>
+                    🔗 링크 복사
+                  </button>
+                </>
+              }
+            >
+              {runKey > 0 ? (
+                isPhysics && !(rec && rec.data) ? (
+                  <div className="empty">경기 기록을 불러오는 중…</div>
+                ) : (
+                  <Stage
+                    result={r}
+                    runKey={runKey}
+                    recording={rec && rec.data}
+                    meId={me.id}
+                    onDone={() => setModal(true)}
+                  />
+                )
               ) : (
-                <Stage
-                  result={r}
-                  runKey={runKey}
-                  recording={rec && rec.data}
-                  onDone={() => setModal(true)}
-                />
-              )
-            ) : (
-              <div className="winner-banner">
-                🎉 {r.winners.map((w) => w.nickname).join(', ')}
-              </div>
-            )}
-            <div className="row" style={{ justifyContent: 'center', gap: 8 }}>
-              <button className="btn" onClick={replay}>
-                ▶ 연출 다시 보기
-              </button>
-              <button className="btn" onClick={copyLink}>
-                🔗 링크 복사
-              </button>
-            </div>
+                <div className="winner-banner">
+                  🎉 {r.winners.map((w) => w.nickname).join(', ')}
+                </div>
+              )}
+            </ShowFrame>
           </div>
           <div className="card">
             <h3>🏆 당첨자 ({r.winners.length}명)</h3>
@@ -437,7 +447,24 @@ export default function Detail() {
                 <dt>결과 해시</dt>
                 <dd>{r.hash}</dd>
               </dl>
-              {r.algo === ROULETTE_ALGO ? (
+              {r.algo === SIEGE_ALGO ? (
+                <p className="muted">
+                  마감 때 봉인한 seed 로 병사가 서는 자리, 달리기·오르기 속도,
+                  물대포·물총·물바가지를 쓰는 타이밍과 목표를 정한 뒤, 서버가
+                  병사 시뮬레이션을 끝까지 돌려요. 두 줄로 오르는 사다리 6개
+                  아래에서 병사들이 줄 없이 뒤엉켜 밀치고, 줄이 비는 순간 발치에
+                  손이 닿는 병사 중 아직 못 타 본 사람이, 그다음은 가장 가까운
+                  사람이 올라요(사다리 위에서는 추월 없음). 공성추가 성문을
+                  두드리다가 성벽 꼭대기에 오른 인원이 정원의 60%가 되는 순간
+                  문이 부서지고(언제나 정원이 차기 전), 그 뒤로는 성문으로도
+                  들어갈 수 있지만 안뜰 물대포가 몰려오는 병사를 뒤로 밀어내요.
+                  성벽 위 통로에 발을 디디거나 성문 안쪽 도착선을 넘은 순서를
+                  합쳐 먼저 들어온 {r.winnerCount}명이 당첨이에요. 물에 맞으면
+                  넘어지거나 밀려나고 사다리에서 떨어지지만, 다시 일어나
+                  도전해요(탈락 없음, 한 명당 최대 2번). 화면은 저장된 기록을
+                  그대로 재생할 뿐이에요.
+                </p>
+              ) : r.algo === ROULETTE_ALGO ? (
                 <p className="muted">
                   마감 때 봉인한 seed 로 칸 배치, 휠 회전 속도, 공을 던지는
                   위치와 세기를 정한 뒤, 서버가 3D 물리 엔진으로 룰렛을 끝까지

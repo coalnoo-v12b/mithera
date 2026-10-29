@@ -60,11 +60,32 @@ describe('GET /api/draws 범위 필터', () => {
       { _id: 'a1', createdBy: ME, participants: [] },
       { _id: 'a2', createdBy: OTHER, participants: [ME] },
     ];
+    jest.spyOn(User, 'find').mockResolvedValue([]);
     const { res } = await listWith({}, docs);
 
     expect(res.body.draws.map((d) => [d.mine, d.joined])).toEqual([
       [true, false],
       [false, true],
     ]);
+  });
+
+  it('각 추첨에 만든 사람 닉네임을 보여준다 (탈퇴하면 표시만 바뀜)', async () => {
+    const docs = [
+      { _id: 'a1', createdBy: ME, participants: [] },
+      { _id: 'a2', createdBy: OTHER, participants: [] },
+      { _id: 'a3', createdBy: ME, participants: [] },
+    ];
+    const userFind = jest
+      .spyOn(User, 'find')
+      .mockResolvedValue([{ _id: ME, nickname: '돈카츠' }]);
+    const { res } = await listWith({}, docs);
+
+    expect(res.body.draws.map((d) => d.creator)).toEqual([
+      '돈카츠',
+      '(탈퇴)',
+      '돈카츠',
+    ]);
+    // 같은 사람은 한 번만 찾는다
+    expect(userFind.mock.calls[0][0]._id.$in).toEqual([ME, OTHER]);
   });
 });

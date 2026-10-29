@@ -153,7 +153,7 @@ export default function List() {
             <div className="muted">
               {STYLE_LABEL[d.style]} · 당첨 {d.winnerCount}명 · 참여{' '}
               {d.participantCount}명{d.joined ? ' · ✅ 참여함' : ''}
-              {d.mine ? ' · ✍️ 내가 만듦' : ''}
+              {` · ✍️ ${d.creator || ''}${d.mine ? ' (나)' : ''} 개설`}
             </div>
             <div className="row between" style={{ marginTop: 6 }}>
               <span className="muted">🗓️ {fmt(d.drawAt)}</span>

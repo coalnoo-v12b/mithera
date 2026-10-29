@@ -112,6 +112,7 @@ export default function New() {
           <label>연출 방식</label>
           <div className="style-pick">
             {[
+              ['siege', '🏰 성벽 탈환전'],
               ['lotto', '🎱 로또 추첨기'],
               ['marbles', '🏁 구슬 레이스'],
               ['ladder', '🪜 사다리타기'],

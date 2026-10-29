@@ -63,6 +63,7 @@ export default function App() {
           <Route path="/login-old" element={<AuthOld />} />
           <Route path="/lab/lotto" element={lab('lotto')} />
           <Route path="/lab/roulette" element={lab('roulette')} />
+          <Route path="/lab/siege" element={lab('siege')} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       ) : (
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="/login-old" element={<AuthOld />} />
           <Route path="/lab/lotto" element={lab('lotto')} />
           <Route path="/lab/roulette" element={lab('roulette')} />
+          <Route path="/lab/siege" element={lab('siege')} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       )}

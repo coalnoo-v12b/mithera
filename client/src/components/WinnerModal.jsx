@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Confetti from './Confetti.jsx';
 import { win } from '../sfx.js';
 
@@ -8,7 +9,8 @@ export default function WinnerModal({ winners, meId, onClose }) {
   }, []);
   const iWon = winners.some((w) => w.id === meId);
 
-  return (
+  // 연출을 전체화면으로 보는 중이면 그 화면 안에 띄워야 보인다
+  return createPortal(
     <div className="modal-bg" onClick={onClose}>
       <Confetti />
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -29,6 +31,7 @@ export default function WinnerModal({ winners, meId, onClose }) {
           확인
         </button>
       </div>
-    </div>
+    </div>,
+    document.fullscreenElement || document.body
   );
 }
