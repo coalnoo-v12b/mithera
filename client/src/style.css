@@ -1360,3 +1360,45 @@ label {
     height: 340px;
   }
 }
+
+/* 연출 전체화면 */
+.stage-box {
+  position: relative;
+}
+.full-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  opacity: 0.85;
+}
+.stage-box:fullscreen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px;
+  background: var(--bg, #fff);
+  overflow: auto;
+}
+.stage-box:fullscreen .lotto-stage {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+.stage-box:fullscreen .stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.stage-box:fullscreen .stage canvas {
+  width: 100%;
+  height: calc(100vh - 150px);
+  max-width: none;
+  object-fit: contain;
+  box-shadow: none;
+}
+.stage-box:fullscreen .stage .cards {
+  zoom: 1.8;
+}

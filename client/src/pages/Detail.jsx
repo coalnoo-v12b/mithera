@@ -28,6 +28,8 @@ export default function Detail() {
   const [d, setD] = useState(null);
   const [runKey, setRunKey] = useState(0); // 0: 연출 없이 결과만, 1 이상: 연출 재생
   const [modal, setModal] = useState(false);
+  const boxRef = useRef(null); // 연출 영역 (전체화면으로 키울 대상)
+  const [full, setFull] = useState(false);
   const [server, setServer] = useState(null); // 서버 검증 결과
   const [local, setLocal] = useState(null); // 브라우저 검증 결과
   const [chain, setChain] = useState(null);
@@ -169,6 +171,19 @@ export default function Detail() {
       toast('링크 복사에 실패했어요');
     }
   };
+  useEffect(() => {
+    const sync = () => setFull(document.fullscreenElement === boxRef.current);
+    document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, []);
+  const toggleFull = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await boxRef.current.requestFullscreen();
+    } catch {
+      toast('이 브라우저에서는 전체화면을 쓸 수 없어요');
+    }
+  };
   const replay = () => {
     setModal(false);
     setRunKey((k) => k + 1);
@@ -200,14 +215,6 @@ export default function Detail() {
 
   return (
     <Layout title={d.title} back>
-      {modal && r && (
-        <WinnerModal
-          winners={r.winners}
-          meId={me.id}
-          onClose={() => setModal(false)}
-        />
-      )}
-
       <div className="card">
         <div className="row between">
           <h3>
@@ -310,22 +317,41 @@ export default function Detail() {
             )}
           </div>
           <div className="card">
-            {runKey > 0 ? (
-              isPhysics && !(rec && rec.data) ? (
-                <div className="empty">경기 기록을 불러오는 중…</div>
+            <div ref={boxRef} className={'stage-box' + (full ? ' full' : '')}>
+              {runKey > 0 ? (
+                isPhysics && !(rec && rec.data) ? (
+                  <div className="empty">경기 기록을 불러오는 중…</div>
+                ) : (
+                  <Stage
+                    result={r}
+                    runKey={runKey}
+                    recording={rec && rec.data}
+                    onDone={() => setModal(true)}
+                  />
+                )
               ) : (
-                <Stage
-                  result={r}
-                  runKey={runKey}
-                  recording={rec && rec.data}
-                  onDone={() => setModal(true)}
+                <div className="winner-banner">
+                  🎉 {r.winners.map((w) => w.nickname).join(', ')}
+                </div>
+              )}
+              {runKey > 0 && document.fullscreenEnabled && (
+                <button
+                  type="button"
+                  className="btn small full-btn"
+                  onClick={toggleFull}
+                >
+                  {full ? '✕ 전체화면 닫기' : '⛶ 전체화면'}
+                </button>
+              )}
+              {/* 전체화면에서는 이 영역 안의 것만 보이므로 당첨 팝업도 여기에 둔다 */}
+              {modal && (
+                <WinnerModal
+                  winners={r.winners}
+                  meId={me.id}
+                  onClose={() => setModal(false)}
                 />
-              )
-            ) : (
-              <div className="winner-banner">
-                🎉 {r.winners.map((w) => w.nickname).join(', ')}
-              </div>
-            )}
+              )}
+            </div>
             <div className="row" style={{ justifyContent: 'center', gap: 8 }}>
               <button className="btn" onClick={replay}>
                 ▶ 연출 다시 보기

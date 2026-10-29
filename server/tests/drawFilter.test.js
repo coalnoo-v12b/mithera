@@ -18,7 +18,7 @@ const listWith = async (query, docs = []) => {
     .spyOn(User, 'findById')
     .mockResolvedValue({ _id: ME, user_type: 'user' });
   const findSpy = jest.spyOn(Draw, 'find').mockReturnValue({
-    sort: () => ({ limit: () => Promise.resolve(docs) }),
+    sort: () => ({ limit: () => ({ populate: () => Promise.resolve(docs) }) }),
   });
   const res = await request(app)
     .get('/api/draws')
