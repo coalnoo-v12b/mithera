@@ -6,8 +6,9 @@
 //
 // 규칙 (siege-v1)
 // - 사다리는 성문 양쪽에 3개씩 모두 6개이고, 하나에 두 줄로 나란히 오를 수 있다 (오르는 줄 12개).
-//   병사들은 사다리 발치로 몰려가 줄 없이 뒤엉켜 밀치고, 한 줄의 아래쪽이 비면 그 순간 그 줄 발치에 손이 닿는
-//   병사 중 아직 사다리를 못 타 본 사람이, 그다음은 가장 가까운 사람이 오른다. 자기 사다리가 너무 붐비면 옆 사다리로
+//   병사들은 사다리 발치로 몰려가 줄 없이 뒤엉켜 밀친다. 한 줄의 아래쪽이 비면 그 사다리 앞 무리(발치에서 4m 안)
+//   가운데 한 명이 몸싸움 끝에 사다리를 잡는다: 아직 사다리를 못 타 본 사람 중에서 seed 로 뽑고, 뽑힌 병사는 무리를
+//   헤치고 발치로 나아가 오른다 (먼저 와 있었다고 먼저 오르는 것이 아니다). 자기 사다리가 너무 붐비면 옆 사다리로
 //   옮겨 가기도 한다. 사다리에서 떨어지면 벽에 부딪혀 뒤로 굴러떨어진다.
 // - 사다리 위에서는 줄마다 한 줄로 오른다. 앞사람과 최소 간격을 지키고, 추월하지 않는다.
 // - 땅 위 병사는 서로 몸이 겹치지 않는다. 빈 곳으로만 걸음을 옮기고, 막히면 옆으로 비키거나 기다린다.
@@ -16,13 +17,16 @@
 //   적다. 그래서 문은 언제나 당첨 정원이 다 차기 전에 열린다.
 // - 문이 열리면 성문 가까운 병사는 사다리와 성문 중 빨리 들어갈 수 있는 쪽을 고르고, 공성추 양옆으로 몰려 들어간다.
 //   성 안뜰의 물대포 2문이 성문으로 몰려오는 병사를 쏘아 뒤로 밀어낸다 (성문 가까이 있다고 유리하지 않게).
-// - 문이 부서지는 순간 성 안에서 기마병(4명, 200명 넘으면 6명)이 차례로 쏟아져 나와 seed 로 정한 길을 따라
-//   공성추 옆으로 빠져나가 사다리 앞 무리를 휘젓고 텅 빈 들판 뒤쪽으로 빠져 사라진다. 말에 닿은 병사는 앞으로 크게 밀려나고
+// - 출발선 바로 앞에 거마책(나무 말뚝 장애물)이 3~4개 놓인다 (자리는 seed 로, 가운데 공성추 길은 비운다).
+//   거마책은 움직이지 않는 몸이라 앞줄 병사는 끝을 돌아가야 하고, 빈틈 쪽 뒷줄 병사가 먼저 빠져나가기도 한다.
+// - 문이 부서지는 순간 성 안에서 기마병(4명, 200명 넘으면 6명)이 차례로 쏟아져 나와, 문을 나서자마자 성벽 쪽으로
+//   꺾어 성벽을 따라 사다리 앞 무리를 쓸고 지나간 뒤, 한 번 안쪽으로 되돌아 휘젓고 들판 옆으로 빠져 사라진다
+//   (지나가는 길의 세부는 seed 로). 말에 닿은 병사는 앞으로 크게 밀려나고
 //   자주 넘어진다 (사다리 위 병사는 닿지 않는다). 말은 움직이지 않는 몸처럼 다른 병사와 겹치지 않으며,
 //   기마병에 밀린 것은 맞은 횟수(최대 2번)에 넣지 않는다. 기마병은 한 번 휘젓고 떠나므로 경기는 언제나 끝난다.
 // - 도착: 성벽 쪽은 사다리에서 성벽 위 통로(도착 구역)에 발을 디딘 순간, 성문 쪽은 문 안쪽 도착선을 넘은 순간.
 //   두 길의 도착을 시각 순서대로 합쳐서 순위를 정하고, 한 사람은 한 번만 센다.
-// - 방어: 양쪽 탑의 물대포 4문이 사다리 쪽 무리와 사다리를 오르는 병사에게 물을 쏜다. 땅에서 맞으면 넘어지거나
+// - 방어: 양쪽 탑의 물대포 4문이 사다리 쪽 무리(성벽에 가까이 온 병사일수록 잘 노린다)와 사다리를 오르는 병사에게 물을 쏜다. 땅에서 맞으면 넘어지거나
 //   밀려나고, 사다리에서 맞으면 떨어진다. 성벽 위 수비군은 물총으로 옆 사다리를 오르는 병사를 떨어뜨리고, 사다리마다
 //   꼭대기의 수비군이 막 올라온 병사에게 물바가지를 부어 떨어뜨린다. 탑의 물대포는 가운데 성문·공성추 길에는 쏘지 않는다.
 //   맞으면 잠시 뒤 일어나 다시 사다리나 성문으로 간다 (탈락 없음).
@@ -49,13 +53,18 @@ const VERSIONS = {
     topDrop: 0.6, // 사다리 꼭대기 발판이 성벽 위보다 낮은 정도
     arriveZ: 1.0, // 벽 앞면에서 이만큼 안쪽이 성벽 도착 구역의 시작
     footBack: 0.45, // 사다리 발치(오르기 시작하는 자리)가 사다리 아래 끝보다 앞쪽인 거리
-    reach: 0.75, // 발치에서 이만큼 안에 있어야 사다리를 잡는다
+    reach: 0.4, // 발치에서 이만큼 안에 들어와야 사다리를 잡는다
+    grabPool: 4, // 줄 발치에서 이만큼 안의 병사들이 몸싸움을 벌인다 (사다리 앞 무리 전체)
+    grabNear: 1.2, // 뽑힐 가능성: 발치에서 이 거리만큼 멀어질 때마다 줄어드는 정도
+    barge: 2.4, // 사다리를 잡으러 무리를 헤치고 나아가는 빠르기 (m/s)
+    grabWait: 5, // 이 시간 안에 발치에 못 닿으면 놓치고 다시 뽑는다 (s)
+    room: 0.12, // 무리 속에서 밀고 들어갈 때 남겨 두는 틈 (헤치고 지나갈 자리가 생기게)
     climbGap: 1.0, // 사다리 위 앞사람과의 최소 간격 (사다리 길이 기준)
     run: [3.6, 4.8], // 달리기 속도 (m/s)
     press: 1.5, // 무리 속에서 밀고 들어가는 속도
     crowdR: 4, // 발치에서 이만큼 안이면 무리 속
     climb: [0.95, 1.35], // 오르는 속도
-    react: [0, 0.8], // 출발 반응 시간 (s)
+    react: [0, 5], // 출발 반응 시간 (s): 출발 신호에 반응하는 때가 제각각
     step: 0.7, // 사다리 꼭대기에서 성벽 위로 올라서는 시간
     radius: 0.38, // 병사 몸 반지름 (겹침 판정)
     downRadius: 0.6, // 넘어져 누운 병사가 차지하는 반지름
@@ -82,6 +91,9 @@ const VERSIONS = {
     cannonClimber: 0.45, // 사다리 위 병사를 노릴 확률
     hitCannonClimber: 0.7, // 사다리 위에서 물대포에 맞아 떨어질 확률
     cannonMinX: 3.5, // 성문 가운데에서 이만큼 떨어진 병사만 노리고 맞힌다
+    cannonPick: 8, // 땅 위 병사를 노릴 때 이만큼 무작위로 골라 그중 성벽에 가장 가까운 병사를 노린다
+    cannonBack: 1.6, // 맞은 병사를 성벽에서 떼어 들판 쪽으로 미는 정도
+    cannonPush: [1.8, 3.0], // 탑 물대포에 밀려나는 거리
     splash: 2.0, // 물이 퍼지는 반지름
     hitCenter: 0.8, // 노린 병사가 맞을 확률
     hitSplash: 0.4, // 주변 병사가 맞을 확률
@@ -97,6 +109,12 @@ const VERSIONS = {
     gateHitCenter: 0.8,
     gateHitSplash: 0.55,
     gatePush: [1.6, 2.6],
+    // 거마책 (출발선 앞 장애물)
+    barricadeHalf: 2.4, // 거마책 길이의 절반 (말뚝 X 셋)
+    barricadeGap: 1.8, // 거마책끼리 최소한 이만큼은 떨어진다 (병사가 빠져나갈 틈)
+    barricadeR: 0.7, // 거마책이 땅에서 차지하는 앞뒤 반폭
+    barricadeZ: [1.3, 3.0], // 놓이는 앞뒤 자리 (출발선 0 기준, 앞줄 바로 앞)
+    barricadeClear: 3, // 가운데(공성추 길)에서 이만큼은 비운다
     // 기마병 (문이 부서지면 성 안에서 쏟아져 나온다)
     cavSpeed: [7.2, 8.4], // 말의 빠르기 (먼저 나간 말이 더 빠르게 정해 서로 따라잡지 않는다)
     cavGap: 0.7, // 같은 쪽에서 다음 말이 나가기까지 (s)
@@ -131,7 +149,7 @@ const DT = 1 / HZ;
 const SAMPLE = 2; // 2스텝마다 1프레임 기록 (10fps, 화면에서 보간)
 const MAX_TICKS = HZ * 300;
 const TAIL_TICKS = HZ * 2.5;
-const ITERS = 5; // 몸 겹침을 푸는 반복 횟수
+const ITERS = 6; // 몸 겹침을 푸는 반복 횟수
 
 // 병사 상태 (기록의 events 에 숫자로 남는다)
 const ST = {
@@ -301,6 +319,70 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
   }
   shuffle(spots, rng);
 
+  // 거마책: 200명이 넘든 안 넘든 60명 넘으면 4개, 아니면 3개. 양쪽에 나눠 놓고, 칸 안에서 seed 로 조금씩 옮긴다.
+  const barricades = [];
+  {
+    const count = n > 60 ? 4 : 3;
+    const left = count === 4 ? 2 : rng() < 0.5 ? 1 : 2;
+    const span = FW / 2 + 1 - P.barricadeClear;
+    const body = 2 * (P.barricadeHalf + P.barricadeR);
+    for (const [sd, m] of [
+      [-1, left],
+      [1, count - left],
+    ]) {
+      // 한쪽의 빈 자리를 m+1 개의 틈(가운데 쪽, 사이, 바깥쪽)으로 무작위로 나눈다. 사이 틈은 최소 barricadeGap.
+      const extra = Math.max(0, span - m * body - (m - 1) * P.barricadeGap);
+      const cuts = Array.from({ length: m }, () => rng() * extra).sort(
+        (a, b) => a - b
+      );
+      let edge = P.barricadeClear;
+      let used = 0;
+      for (let k = 0; k < m; k++) {
+        edge += cuts[k] - used + (k > 0 ? P.barricadeGap : 0);
+        used = cuts[k];
+        barricades.push({
+          x: sd * (edge + body / 2),
+          z: between(rng, P.barricadeZ),
+          half: P.barricadeHalf,
+        });
+        edge += body;
+      }
+    }
+    barricades.sort((a, b) => a.x - b.x);
+    Lay.barricades = barricades.map((b) => [
+      Math.round(b.x * 100) / 100,
+      Math.round(b.z * 100) / 100,
+      b.half,
+    ]);
+  }
+  // 거마책 몸통: 길게 늘어선 원들 (움직이지 않는 몸)
+  const barricadeCircles = [];
+  for (const b of barricades)
+    for (let d = -b.half; d <= b.half + 1e-9; d += 0.5)
+      barricadeCircles.push([b.x + d, b.z, P.barricadeR]);
+  // 지금 자리에서 목표로 곧장 가는 길을 거마책이 막으면, 가까운 거마책의 끝(막힌 지점에서 가까운 쪽)으로 돌아간다
+  const detour = (i, tx, tz) => {
+    let best = null;
+    let bestDz = Infinity;
+    let side = 1;
+    for (const b of barricades) {
+      if (z[i] >= b.z || tz <= b.z) continue;
+      const dzb = b.z - z[i];
+      if (dzb > 8 || dzb >= bestDz) continue;
+      const xc = x[i] + ((tx - x[i]) * dzb) / (tz - z[i]);
+      const reach = b.half + P.barricadeR + P.radius + 0.15;
+      if (Math.abs(xc - b.x) >= reach) continue;
+      best = b;
+      bestDz = dzb;
+      side = xc < b.x ? -1 : 1;
+    }
+    if (!best) return null;
+    return [
+      best.x + side * (best.half + P.barricadeR + P.radius + 0.25),
+      best.z,
+    ];
+  };
+
   const x = new Float64Array(n);
   const y = new Float64Array(n);
   const z = new Float64Array(n);
@@ -308,6 +390,8 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
   const lad = new Int32Array(n); // 맡은 사다리
   const lane = new Int32Array(n); // 오르고 있는 줄
   const tries = new Int32Array(n); // 지금까지 사다리를 잡은 횟수
+  const grab = new Int32Array(n).fill(-1); // 몸싸움 끝에 잡게 된 줄 (무리를 헤치고 가는 중이면)
+  const grabAt = new Int32Array(n); // 잡게 된 스텝
   const topAt = new Int32Array(n); // 꼭대기에서 물바가지를 받고 버티는 중이면 결판나는 스텝 (아니면 0)
   const dumpOf = new Int32Array(n).fill(-1); // 그때의 물바가지 기록 번호
   const route = new Int8Array(n); // 0: 사다리, 1: 성문
@@ -341,6 +425,14 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
   const NLANE = LANES.length;
   const climbers = Array.from({ length: NLANE }, () => []); // 줄마다, 위에 있는 사람부터
   const onLadder = (k) => climbers[2 * k].length + climbers[2 * k + 1].length;
+  // 줄마다 잡으러 오는 병사 둘 (한 명이 오르는 동안 다음, 그다음 사람이 무리를 헤치고 온다)
+  const laneRes = new Int32Array(NLANE * 2).fill(-1);
+  const release = (i) => {
+    if (grab[i] < 0) return;
+    for (let q = 0; q < 2; q++)
+      if (laneRes[grab[i] * 2 + q] === i) laneRes[grab[i] * 2 + q] = -1;
+    grab[i] = -1;
+  };
 
   // 기마병: 문이 부서지면 만든다. pts 는 지나갈 자리들, 마지막 자리에 닿으면 들판 밖으로 사라진다.
   const riders = [];
@@ -445,7 +537,7 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
   const SIN60 = 0.8660254037844386;
   const blocked = (i, nx, nz) => {
     let hit = false;
-    const ri = radiusOf(i);
+    const ri = radiusOf(i) + (st[i] === ST.QUEUE ? P.room / 2 : 0);
     neighbors(nx, nz, (j) => {
       if (hit || j === i || !onGround(j)) return;
       const r = ri + radiusOf(j);
@@ -520,6 +612,7 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
   const mass = (i) => {
     const s = st[i];
     if (s === ST.ARRIVED) return 50;
+    if (grab[i] >= 0) return 5;
     if (s === ST.DOWN) return 4;
     if (s === ST.PUSH) return 2;
     return 1;
@@ -546,7 +639,7 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
       }
   };
   const clampGround = (i) => {
-    const lim = FW / 2 + 6;
+    const lim = FW / 2 + 16;
     if (x[i] < -lim) x[i] = -lim;
     if (x[i] > lim) x[i] = lim;
     const r = P.radius;
@@ -566,7 +659,7 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
     // 움직이지 않는 몸: 공성추(공병 포함)와 달리는 말
     const circles = ramCircles()
       .map((cz) => [0, cz, P.ramHalf])
-      .concat(cavCircles());
+      .concat(barricadeCircles, cavCircles());
     for (let iter = 0; iter < ITERS; iter++) {
       buildGrid();
       for (let i = 0; i < n; i++) {
@@ -646,13 +739,21 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
     hits[i] < P.maxHits && tick >= guardUntil[i] && !aimed[i];
 
   // 물대포에 맞음: 대포 반대쪽으로 밀려나고, 넘어지거나 비틀거린다
-  const knock = (tick, i, from, push = P.push, count = true) => {
+  // back: 성벽 반대쪽(들판 쪽)으로 더 밀어내는 정도 (탑 물대포는 위에서 내리꽂아 벽에서 떼어 낸다)
+  const knock = (tick, i, from, push = P.push, count = true, back = 0) => {
     if (count) hits[i]++;
+    release(i);
     let dx = x[i] - from[0];
     let dz = z[i] - from[2];
-    const d = Math.sqrt(dx * dx + dz * dz) || 1;
+    let d = Math.sqrt(dx * dx + dz * dz) || 1;
     dx /= d;
     dz /= d;
+    if (back) {
+      dz -= back;
+      d = Math.sqrt(dx * dx + dz * dz) || 1;
+      dx /= d;
+      dz /= d;
+    }
     const len = between(rng, push);
     const falls = rng() < P.knockFall;
     slide[i] = { dx: dx * len, dz: dz * len };
@@ -714,17 +815,28 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
     });
     // 기마병: 양쪽으로 같은 수가 나간다. 같은 쪽에서는 먼저 나간 말이 더 빠르고, 휘젓는 줄(앞뒤 거리)이 달라 서로 겹치지 않는다.
     const per = n > 200 ? 3 : 2;
+    // 말이 거마책을 넘지 않게 거마책보다 앞(성벽 쪽)으로만 달린다
+    let barricadeFloor = -Infinity;
+    for (const b of barricades)
+      barricadeFloor = Math.max(
+        barricadeFloor,
+        b.z + P.barricadeR + P.cavR + 1.2
+      );
     for (const sd of [-1, 1]) {
       const v0 = between(rng, P.cavSpeed);
       for (let k = 0; k < per; k++) {
-        const band = baseZ - 3.5 - k * 2.8 - rng() * 1.2;
+        // 성벽 쪽 줄: 사다리 발치 바로 앞 (벽과 말 사이에 병사가 끼지 않을 만큼은 띄운다)
+        const wallLine = baseZ - 2.6 - k * 1.5;
+        // 거마책 쪽으로는 내려가지 않는다
+        const floorZ = barricadeFloor;
+        const z = (v) => Math.max(floorZ, v);
         const pts = [
           [sd * 1.8, WZ + P.walk + 3], // 성 안뜰에서
-          [sd * 1.8, WZ - 6.8], // 공성추 옆으로 빠져나와
-          [sd * (P.innerLadder - 1 + rng() * 2.5), band], // 사다리 앞 무리로 뛰어들고
-          [sd * (FW / 2 - 1.5 - rng() * 3), band + (rng() - 0.5) * 2], // 옆으로 휘저은 뒤
-          [sd * (P.innerLadder + 2 + rng() * 5), band - 2.5 - rng() * 2.5], // 다시 안쪽으로 꺾었다가
-          [sd * (FW / 2 - 3 - rng() * 4), -14 - rng() * 4], // 텅 빈 들판 뒤쪽으로 빠져 사라진다
+          [sd * 1.8, wallLine + 0.3], // 문을 나서자마자
+          [sd * (FW / 2 + 1.5), z(wallLine + (rng() - 0.5) * 0.6)], // 성벽을 따라 쫙 꺾어 바깥 끝까지 쓸고
+          [sd * (FW / 2 - 2 - rng() * 2), z(wallLine - 3.5 - rng() * 1.5)], // 되돌아
+          [sd * (P.innerLadder + 1 + rng() * 3), z(wallLine - 5 - rng() * 1.5)], // 안쪽으로 한 번 더 휘젓고
+          [sd * (FW / 2 + 12), z(wallLine - 6.5 - rng())], // 들판 옆으로 빠져 사라진다
         ];
         riders.push({
           pts,
@@ -752,6 +864,7 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
       if (st[i] !== ST.RUN && st[i] !== ST.QUEUE) continue;
       if (route[i] !== ROUTE.WALL || (lad[i] !== innerL && lad[i] !== innerR))
         continue;
+      if (grab[i] >= 0) continue;
       cand.push([i, dist(i, sideOf(x[i]) * P.laneX, gateZ)]);
     }
     cand.sort((a, b) => a[1] - b[1] || rank[a[0]] - rank[b[0]]);
@@ -830,11 +943,11 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
             const rr = P.cavR + P.radius + 0.1;
             if ((x[j] - cx) ** 2 + (z[j] - cz) ** 2 >= rr * rr) return;
             r.hit.add(j);
-            // 말 뒤쪽에서 병사 쪽으로: 옆과 앞으로 촥 밀려난다
+            // 말 한참 뒤쪽에서 병사 쪽으로: 말이 달리는 방향(앞)으로 크게, 옆으로 조금 촥 밀려난다
             knock(
               tick,
               j,
-              [r.x - r.hx * 1.2, 0, r.z - r.hz * 1.2],
+              [r.x - r.hx * 2.5, 0, r.z - r.hz * 2.5],
               P.cavPush,
               false
             );
@@ -906,39 +1019,74 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
       }
     }
 
-    // 2) 사다리 아래쪽이 비면, 그 순간 발치에 가장 가까운 병사가 잡고 오른다 (같으면 seed 로 정한 순서)
+    // 2) 사다리 줄이 비면: 잡으러 오는 병사가 없으면 그 사다리 앞 무리 가운데 한 명을 뽑는다
+    //    (아직 사다리를 못 타 본 사람 중에서, 없으면 덜 타 본 사람 중에서 seed 로). 뽑힌 병사가 발치에 닿으면 오른다.
     buildGrid();
     for (let ln = 0; ln < NLANE; ln++) {
       const list = climbers[ln];
       const k = ln >> 1;
-      if (list.length && effP(list[list.length - 1]) < P.climbGap) continue;
-      // 발치 가까이(손이 닿는 곳)에 있는 병사 중 아직 사다리를 못 잡아 본 사람이 먼저, 그다음은 더 가까운 사람
-      // (같으면 seed 로 정한 순서). 되도록 많은 병사가 사다리를 타 보게 한다.
-      let pick = -1;
-      let pickD = Infinity;
-      neighbors(LANES[ln], footZ, (j) => {
-        if (route[j] !== ROUTE.WALL || lad[j] !== k) return;
-        if (st[j] !== ST.RUN && st[j] !== ST.QUEUE) return;
-        const d = dist(j, LANES[ln], footZ);
-        if (d >= P.reach) return;
-        const better =
-          pick < 0 ||
-          tries[j] < tries[pick] ||
-          (tries[j] === tries[pick] &&
-            (d < pickD - 1e-9 ||
-              (Math.abs(d - pickD) <= 1e-9 && rank[j] < rank[pick])));
-        if (better) {
-          pick = j;
-          pickD = d;
+      const clear = !list.length || effP(list[list.length - 1]) >= P.climbGap;
+      // 5초 안에 발치에 못 닿으면 놓치고 다시 뽑는다 (무리에 꽉 끼었을 때). 발치에 먼저 닿은 사람이 오른다.
+      let free = -1;
+      let started = false;
+      for (let q = 0; q < 2; q++) {
+        const r0 = laneRes[ln * 2 + q];
+        if (r0 < 0) {
+          if (free < 0) free = q;
+          continue;
         }
-      });
-      if (pick < 0) continue;
-      climbP[pick] = 0;
-      lane[pick] = ln;
-      tries[pick]++;
-      setSt(tick, pick, ST.CLIMB);
-      list.push(pick);
-      placeOnLadder(pick);
+        if (tick - grabAt[r0] > P.grabWait * HZ) {
+          release(r0);
+          if (free < 0) free = q;
+          continue;
+        }
+        if (!started && clear && dist(r0, LANES[ln], footZ) < P.reach) {
+          release(r0);
+          climbP[r0] = 0;
+          lane[r0] = ln;
+          tries[r0]++;
+          setSt(tick, r0, ST.CLIMB);
+          list.push(r0);
+          placeOnLadder(r0);
+          started = true;
+          if (free < 0) free = q;
+        }
+      }
+      if (free < 0) continue;
+      // 다음에 오를 사람은 앞사람이 오르는 동안 미리 뽑아서, 그사이 무리를 헤치고 발치로 온다
+      let least = Infinity;
+      const pool = [];
+      const weight = [];
+      let total = 0;
+      for (let j = 0; j < n; j++) {
+        if (st[j] !== ST.QUEUE || route[j] !== ROUTE.WALL || lad[j] !== k)
+          continue;
+        const d = dist(j, LANES[ln], footZ);
+        if (grab[j] >= 0 || d > P.grabPool) continue;
+        if (tries[j] < least) {
+          least = tries[j];
+          pool.length = 0;
+          weight.length = 0;
+          total = 0;
+        }
+        if (tries[j] !== least) continue;
+        // 발치에 가까울수록 조금 더 잘 뽑히지만, 무리 뒤쪽도 충분히 뽑힌다
+        const w = 1 / (1 + d / P.grabNear);
+        pool.push(j);
+        weight.push(w);
+        total += w;
+      }
+      if (!pool.length) continue;
+      let roll = rng() * total;
+      let pi = 0;
+      while (pi < pool.length - 1 && roll >= weight[pi]) {
+        roll -= weight[pi];
+        pi++;
+      }
+      const pick = pool[pi];
+      grab[pick] = ln;
+      grabAt[pick] = tick;
+      laneRes[ln * 2 + free] = pick;
     }
 
     // 3) 땅 위 병사들 (번호 순서로 처리해서 결과가 늘 같게)
@@ -950,6 +1098,20 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
       }
       if (s === ST.RUN || s === ST.QUEUE || s === ST.GATE) {
         timer[i] += DT;
+        if (grab[i] >= 0) {
+          // 몸싸움 끝에 사다리를 잡게 된 병사: 무리를 헤치고 발치로 나아간다 (다른 병사가 비켜난다)
+          const lx = LANES[grab[i]];
+          const dx = lx - x[i];
+          const dz = footZ - z[i];
+          const d = Math.sqrt(dx * dx + dz * dz);
+          if (d > 1e-9) {
+            const st2 = Math.min(d, P.barge * DT);
+            x[i] += (dx / d) * st2;
+            z[i] += (dz / d) * st2;
+            clampGround(i);
+          }
+          continue;
+        }
         // 가끔(사람마다 다른 때에) 옆 사다리나 성문이 더 빠른지 다시 생각한다
         if ((tick + i * 7) % Math.round(P.rethink * HZ) === 0) {
           const cur =
@@ -970,15 +1132,21 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
           const lx = sd * P.laneX;
           if (z[i] < ram.front + 0.3 && Math.abs(x[i]) < P.ramHalf + 0.6)
             stepTo(i, sd * (P.ramHalf + 0.9), z[i] + 0.8, vRun[i], tick);
-          else if (z[i] < WZ - 0.6) stepTo(i, lx, WZ - 0.3, vRun[i], tick);
-          else stepTo(i, lx, gateZ + 5, vRun[i], tick);
+          else if (z[i] < WZ - 0.6) {
+            const via = detour(i, lx, WZ - 0.3);
+            if (via) stepTo(i, via[0], via[1], vRun[i], tick);
+            else stepTo(i, lx, WZ - 0.3, vRun[i], tick);
+          } else stepTo(i, lx, gateZ + 5, vRun[i], tick);
           setSt(tick, i, z[i] > WZ - 6 ? ST.GATE : ST.RUN);
           continue;
         }
-        // 사다리로: 멀리서는 달려가고, 발치 무리 속에서는 밀치며 조금씩 다가간다
+        // 사다리로: 멀리서는 달려가고(거마책이 막으면 끝으로 돌아서), 발치 무리 속에서는 밀치며 조금씩 다가간다
         const k = lad[i];
         const d = dist(i, ladders[k], footZ);
-        stepTo(i, ladders[k], footZ, d < P.crowdR ? P.press : vRun[i], tick);
+        const via = d < P.crowdR ? null : detour(i, ladders[k], footZ);
+        if (via) stepTo(i, via[0], via[1], vRun[i], tick);
+        else
+          stepTo(i, ladders[k], footZ, d < P.crowdR ? P.press : vRun[i], tick);
         setSt(tick, i, d < P.crowdR ? ST.QUEUE : ST.RUN);
         continue;
       }
@@ -1106,7 +1274,8 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
         victims.push(i);
       }
       for (const i of victims)
-        if (rng() < (i === t ? P.hitCenter : P.hitSplash)) knock(tick, i, from);
+        if (rng() < (i === t ? P.hitCenter : P.hitSplash))
+          knock(tick, i, from, P.cannonPush, true, P.cannonBack);
     }
     const inGateZone = (i) =>
       route[i] === ROUTE.GATE &&
@@ -1175,7 +1344,13 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
         const pickClimber = climbing.length && rng() < P.cannonClimber;
         const pool = pickClimber || !ground.length ? climbing : ground;
         if (!pool.length) return;
-        const j = Math.floor(rng() * pool.length);
+        // 땅 위 병사는 성벽에 가장 가까이 온 병사를 노린다: 몇 명을 무작위로 골라 그중 가장 앞선 병사 (같으면 먼저 뽑힌 쪽)
+        let j = Math.floor(rng() * pool.length);
+        if (pool === ground)
+          for (let t = 1; t < P.cannonPick; t++) {
+            const c2 = Math.floor(rng() * pool.length);
+            if (z[pool[c2]] > z[pool[j]]) j = c2;
+          }
         const i = pool[j];
         pool.splice(j, 1);
         const [ax, ay, az] = Lay.cannons[c];

@@ -1386,6 +1386,81 @@ function Cavalry({ rec, playRef }) {
   ));
 }
 
+/* ---------------- 거마책 (출발선 앞 나무 말뚝 장애물) ---------------- */
+
+// 긴 가로 들보에 X 자로 엇갈린 말뚝 세 쌍을 밧줄로 묶었다. 끝은 꿀색으로 깎은 뾰족한 머리.
+const LOG_LEN = 2.2;
+const LOG_TILT = 0.72; // 말뚝이 세로에서 기울어진 각도
+function StakePair({ x }) {
+  const wood = <meshStandardMaterial color="#b5682f" roughness={0.75} />;
+  const tip = <meshStandardMaterial color="#f0c46a" roughness={0.6} />;
+  const rope = <meshStandardMaterial color="#d8b878" roughness={0.9} />;
+  return (
+    <group position={[x, 0.75, 0]}>
+      {[LOG_TILT, -LOG_TILT].map((a) => (
+        <group key={a} rotation-x={a}>
+          <mesh>
+            <cylinderGeometry args={[0.13, 0.14, LOG_LEN, 10]} />
+            {wood}
+          </mesh>
+          <mesh position={[0, LOG_LEN / 2 + 0.13, 0]}>
+            <coneGeometry args={[0.13, 0.28, 8]} />
+            {tip}
+          </mesh>
+          {/* 땅에 박는 나무 못 */}
+          <mesh position={[0.2, -LOG_LEN / 2 + 0.12, 0]}>
+            <cylinderGeometry args={[0.05, 0.05, 0.36, 6]} />
+            <meshStandardMaterial color="#8a5a2b" roughness={0.8} />
+          </mesh>
+        </group>
+      ))}
+      {/* 교차점을 감은 밧줄 */}
+      <mesh rotation-y={Math.PI / 2}>
+        <torusGeometry args={[0.2, 0.05, 8, 16]} />
+        {rope}
+      </mesh>
+      <mesh rotation-z={Math.PI / 2} rotation-y={0.5}>
+        <torusGeometry args={[0.19, 0.045, 8, 16]} />
+        {rope}
+      </mesh>
+    </group>
+  );
+}
+
+function Barricades({ rec }) {
+  const list = rec.layout.barricades || [];
+  return list.map(([bx, bz, half], k) => (
+    <group key={k} position={[bx, 0, bz]}>
+      {/* 가로 들보 */}
+      <mesh position={[0, 0.75, 0]} rotation-z={Math.PI / 2}>
+        <cylinderGeometry args={[0.13, 0.13, half * 2 + 0.3, 10]} />
+        <meshStandardMaterial color="#c98a45" roughness={0.75} />
+      </mesh>
+      {/* 들보 끝 나뭇결 면 */}
+      {[-1, 1].map((sd) => (
+        <mesh
+          key={sd}
+          position={[sd * (half + 0.16), 0.75, 0]}
+          rotation-z={Math.PI / 2}
+        >
+          <cylinderGeometry args={[0.11, 0.11, 0.02, 10]} />
+          <meshStandardMaterial color="#e2b06a" roughness={0.8} />
+        </mesh>
+      ))}
+      {[-half + 0.6, 0, half - 0.6].map((x) => (
+        <StakePair key={x} x={x} />
+      ))}
+      {/* 들보를 감은 밧줄 */}
+      {[-half / 2, half / 2].map((x) => (
+        <mesh key={x} position={[x, 0.75, 0]} rotation-y={Math.PI / 2}>
+          <torusGeometry args={[0.16, 0.04, 8, 14]} />
+          <meshStandardMaterial color="#d8b878" roughness={0.9} />
+        </mesh>
+      ))}
+    </group>
+  ));
+}
+
 /* ---------------- 성과 들판 ---------------- */
 
 function stoneTexture() {
@@ -2061,6 +2136,7 @@ export default function SiegeStage({
         />
         <Field rec={recording} decoded={decoded} />
         <Castle rec={recording} decoded={decoded} playRef={playRef} />
+        <Barricades rec={recording} />
         <Ram rec={recording} decoded={decoded} playRef={playRef} />
         {recording.layout.defenders.map((_, k) => (
           <GunDefender

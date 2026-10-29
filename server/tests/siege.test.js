@@ -250,6 +250,48 @@ describe('성벽 탈환전 시뮬레이션', () => {
     }
   });
 
+  it('출발선 앞에 거마책이 3~4개 놓이고, 사이에는 지나갈 틈이 있으며, 아무도 거마책을 통과하지 않는다', async () => {
+    for (const [n, count] of [
+      [40, 3],
+      [300, 4],
+    ]) {
+      const r = JSON.parse(
+        (await siege.simulate({ seed, n, winnerCount: 20 })).raw
+      );
+      const B = r.layout.barricades;
+      expect(B).toHaveLength(count);
+      // 가운데 공성추 길은 비어 있다
+      for (const [bx, , half] of B)
+        expect(Math.abs(bx) - half).toBeGreaterThanOrEqual(3);
+      // 같은 쪽 이웃 거마책 사이 틈은 병사가 지나갈 만큼 (몸통 0.7 씩 + 틈 1.8)
+      const sorted = [...B].sort((a, b) => a[0] - b[0]);
+      for (let k = 1; k < sorted.length; k++) {
+        if (Math.sign(sorted[k][0]) !== Math.sign(sorted[k - 1][0])) continue;
+        const gap =
+          sorted[k][0] -
+          sorted[k][2] -
+          (sorted[k - 1][0] + sorted[k - 1][2]) -
+          2 * 0.7;
+        expect(gap).toBeGreaterThanOrEqual(1.79);
+      }
+      const circles = B.flatMap(([bx, bz, half]) => {
+        const c = [];
+        for (let d = -half; d <= half + 1e-9; d += 0.5) c.push([bx + d, bz]);
+        return c;
+      });
+      const standing = [ST.READY, ST.RUN, ST.QUEUE, ST.GATE, ST.PUSH];
+      eachFrame(r, (f, tick, st, P) => {
+        for (let i = 0; i < r.n; i++) {
+          if (!standing.includes(st[i])) continue;
+          for (const [cx, cz] of circles)
+            expect(Math.hypot(P[i][0] - cx, P[i][2] - cz)).toBeGreaterThan(
+              0.7 + 0.38 - 0.15
+            );
+        }
+      });
+    }
+  });
+
   it('300명·당첨 100명도 금방 끝나고, 기록이 작다', async () => {
     const t0 = Date.now();
     const big = await siege.simulate({ seed, n: 300, winnerCount: 100 });
