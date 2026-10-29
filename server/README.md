@@ -10,7 +10,9 @@ Express 5 + Mongoose 기반 API 서버입니다. 데이터베이스는 MongoDB A
 npm run dev:server
 ```
 
-- 코드를 저장하면 자동으로 재시작됩니다 (`node --watch`).
+- `src` 폴더의 코드를 저장하면 자동으로 재시작됩니다 (`node --watch-path=./src`).
+  - `node_modules`는 감시하지 않습니다. Windows에서는 라이브러리 파일을 처음 읽기만 해도 바뀐 것으로 잡혀 요청 도중 서버가 재시작될 수 있기 때문입니다.
+  - 패키지를 설치하거나 `.env`를 바꾼 뒤에는 서버를 직접 다시 켜 주세요.
 - 정상이면 `MongoDB connected: ...`와 `Server listening on http://localhost:5000`이 출력됩니다.
 
 `server` 폴더에서 직접 실행할 수도 있습니다.
