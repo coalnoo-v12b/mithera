@@ -216,7 +216,7 @@ export default function KnightSkit() {
 
       {calm && !forced && (
         <button type="button" className="sk-play" onClick={replay}>
-          ▶ 15초 콩트 보기
+          ▶ 쇼츠 보기
         </button>
       )}
 
