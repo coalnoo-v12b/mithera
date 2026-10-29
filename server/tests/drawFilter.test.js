@@ -18,7 +18,7 @@ const listWith = async (query, docs = []) => {
     .spyOn(User, 'findById')
     .mockResolvedValue({ _id: ME, user_type: 'user' });
   const findSpy = jest.spyOn(Draw, 'find').mockReturnValue({
-    sort: () => ({ limit: () => Promise.resolve(docs) }),
+    sort: () => ({ limit: () => ({ populate: () => Promise.resolve(docs) }) }),
   });
   const res = await request(app)
     .get('/api/draws')
@@ -65,6 +65,30 @@ describe('GET /api/draws 범위 필터', () => {
     expect(res.body.draws.map((d) => [d.mine, d.joined])).toEqual([
       [true, false],
       [false, true],
+    ]);
+  });
+
+  it('각 추첨에 만든 사람 닉네임을 보여준다 (탈퇴해서 못 찾으면 null)', async () => {
+    // populate('createdBy', 'nickname') 결과: 찾으면 { _id, nickname }, 탈퇴했으면 null
+    const docs = [
+      {
+        _id: 'a1',
+        createdBy: { _id: ME, nickname: '돈카츠' },
+        participants: [],
+      },
+      {
+        _id: 'a2',
+        createdBy: { _id: OTHER, nickname: '수운' },
+        participants: [],
+      },
+      { _id: 'a3', createdBy: null, participants: [] },
+    ];
+    const { res } = await listWith({}, docs);
+
+    expect(res.body.draws.map((d) => [d.creator, d.mine])).toEqual([
+      ['돈카츠', true],
+      ['수운', false],
+      [null, false],
     ]);
   });
 });

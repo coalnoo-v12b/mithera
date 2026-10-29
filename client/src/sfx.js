@@ -39,6 +39,11 @@ function tone(freq, dur, type = 'square', vol = 0.04) {
 
 export const tick = () => tone(900, 0.04);
 export const pop = () => tone(660, 0.12, 'triangle', 0.07);
+// 출격 나팔: 낮은 음에서 높은 음으로 두 번 (성벽 탈환전 기마병)
+export const horn = () =>
+  [392, 523, 392, 659].forEach((f, i) =>
+    setTimeout(() => tone(f, i === 3 ? 0.5 : 0.18, 'sawtooth', 0.05), i * 170)
+  );
 export const win = () =>
   [523, 659, 784, 1047].forEach((f, i) =>
     setTimeout(() => tone(f, 0.28, 'triangle', 0.08), i * 120)

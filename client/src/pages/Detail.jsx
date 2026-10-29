@@ -9,6 +9,7 @@ import {
   LOTTO_ALGO,
   ROULETTE_ALGO,
   RACE_ALGO,
+  SIEGE_ALGO,
 } from '../verify.js';
 import Layout from '../components/Layout.jsx';
 import Wheel from '../components/Wheel.jsx';
@@ -17,6 +18,7 @@ import Marbles from '../components/Marbles.jsx';
 import Ladder from '../components/Ladder.jsx';
 import Lotto from '../components/Lotto.jsx';
 import Roulette from '../components/Roulette.jsx';
+import Siege from '../components/Siege.jsx';
 import Countdown from '../components/Countdown.jsx';
 import ChainView from '../components/ChainView.jsx';
 import WinnerModal from '../components/WinnerModal.jsx';
@@ -28,6 +30,8 @@ export default function Detail() {
   const [d, setD] = useState(null);
   const [runKey, setRunKey] = useState(0); // 0: 연출 없이 결과만, 1 이상: 연출 재생
   const [modal, setModal] = useState(false);
+  const boxRef = useRef(null); // 연출 영역 (전체화면으로 키울 대상)
+  const [full, setFull] = useState(false);
   const [server, setServer] = useState(null); // 서버 검증 결과
   const [local, setLocal] = useState(null); // 브라우저 검증 결과
   const [chain, setChain] = useState(null);
@@ -169,6 +173,19 @@ export default function Detail() {
       toast('링크 복사에 실패했어요');
     }
   };
+  useEffect(() => {
+    const sync = () => setFull(document.fullscreenElement === boxRef.current);
+    document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, []);
+  const toggleFull = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await boxRef.current.requestFullscreen();
+    } catch {
+      toast('이 브라우저에서는 전체화면을 쓸 수 없어요');
+    }
+  };
   const replay = () => {
     setModal(false);
     setRunKey((k) => k + 1);
@@ -195,19 +212,12 @@ export default function Detail() {
           marbles: Marbles,
           ladder: Ladder,
           lotto: Lotto,
+          siege: Siege,
         }[d.style] || Wheel;
   const live = d.status === 'drawing';
 
   return (
     <Layout title={d.title} back>
-      {modal && r && (
-        <WinnerModal
-          winners={r.winners}
-          meId={me.id}
-          onClose={() => setModal(false)}
-        />
-      )}
-
       <div className="card">
         <div className="row between">
           <h3>
@@ -221,7 +231,7 @@ export default function Detail() {
         {d.description && <p>{d.description}</p>}
         <div className="muted">
           {STYLE_LABEL[d.style]} · 당첨 {d.winnerCount}명 · 참여{' '}
-          {d.participantCount}명
+          {d.participantCount}명 · ✍️ {d.creator} 개설
         </div>
         <div className="row between" style={{ marginTop: 6 }}>
           <span className="muted">🗓️ 추첨 예정 {fmt(d.drawAt)}</span>
@@ -310,22 +320,42 @@ export default function Detail() {
             )}
           </div>
           <div className="card">
-            {runKey > 0 ? (
-              isPhysics && !(rec && rec.data) ? (
-                <div className="empty">경기 기록을 불러오는 중…</div>
+            <div ref={boxRef} className={'stage-box' + (full ? ' full' : '')}>
+              {runKey > 0 ? (
+                isPhysics && !(rec && rec.data) ? (
+                  <div className="empty">경기 기록을 불러오는 중…</div>
+                ) : (
+                  <Stage
+                    result={r}
+                    runKey={runKey}
+                    recording={rec && rec.data}
+                    meId={me.id}
+                    onDone={() => setModal(true)}
+                  />
+                )
               ) : (
-                <Stage
-                  result={r}
-                  runKey={runKey}
-                  recording={rec && rec.data}
-                  onDone={() => setModal(true)}
+                <div className="winner-banner">
+                  🎉 {r.winners.map((w) => w.nickname).join(', ')}
+                </div>
+              )}
+              {runKey > 0 && document.fullscreenEnabled && (
+                <button
+                  type="button"
+                  className="btn small full-btn"
+                  onClick={toggleFull}
+                >
+                  {full ? '✕ 전체화면 닫기' : '⛶ 전체화면'}
+                </button>
+              )}
+              {/* 전체화면에서는 이 영역 안의 것만 보이므로 당첨 팝업도 여기에 둔다 */}
+              {modal && (
+                <WinnerModal
+                  winners={r.winners}
+                  meId={me.id}
+                  onClose={() => setModal(false)}
                 />
-              )
-            ) : (
-              <div className="winner-banner">
-                🎉 {r.winners.map((w) => w.nickname).join(', ')}
-              </div>
-            )}
+              )}
+            </div>
             <div className="row" style={{ justifyContent: 'center', gap: 8 }}>
               <button className="btn" onClick={replay}>
                 ▶ 연출 다시 보기
@@ -437,7 +467,26 @@ export default function Detail() {
                 <dt>결과 해시</dt>
                 <dd>{r.hash}</dd>
               </dl>
-              {r.algo === ROULETTE_ALGO ? (
+              {r.algo === SIEGE_ALGO ? (
+                <p className="muted">
+                  마감 때 봉인한 seed 로 병사가 서는 자리, 거마책 자리,
+                  달리기·오르기 속도, 물대포·물총·물바가지를 쓰는 타이밍과 목표,
+                  기마병이 달리는 길을 정한 뒤, 서버가 병사 시뮬레이션을 끝까지
+                  돌려요. 출발선 앞 거마책을 돌아 두 줄 사다리 6개로 몰려간
+                  병사들은 줄 없이 뒤엉켜 밀치고, 줄이 비면 그 사다리 앞 무리
+                  가운데 한 명이 몸싸움 끝에 사다리를 잡아요(아직 못 타 본 사람
+                  중에서 seed 로 뽑고, 먼저 왔다고 먼저 오르지 않아요. 사다리
+                  위에서는 추월 없음). 공성추가 성문을 두드리다가 성벽 꼭대기에
+                  오른 인원이 정원의 60%가 되는 순간 문이 부서지고(언제나 정원이
+                  차기 전), 성 안에서 기마병이 쏟아져 나와 성벽을 따라 무리를
+                  휩쓸어요. 그 뒤로는 성문으로도 들어갈 수 있지만 안뜰 물대포가
+                  뒤로 밀어내요. 성벽 위 통로에 발을 디디거나 성문 안쪽 도착선을
+                  넘은 순서를 합쳐 먼저 들어온 {r.winnerCount}명이 당첨이에요.
+                  물에 맞으면 넘어지거나 밀려나고 사다리에서 떨어지지만, 다시
+                  일어나 도전해요(탈락 없음, 물에는 한 명당 최대 2번). 화면은
+                  저장된 기록을 그대로 재생할 뿐이에요.
+                </p>
+              ) : r.algo === ROULETTE_ALGO ? (
                 <p className="muted">
                   마감 때 봉인한 seed 로 칸 배치, 휠 회전 속도, 공을 던지는
                   위치와 세기를 정한 뒤, 서버가 3D 물리 엔진으로 룰렛을 끝까지
