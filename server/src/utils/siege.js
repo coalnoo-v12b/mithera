@@ -16,6 +16,10 @@
 //   적다. 그래서 문은 언제나 당첨 정원이 다 차기 전에 열린다.
 // - 문이 열리면 성문 가까운 병사는 사다리와 성문 중 빨리 들어갈 수 있는 쪽을 고르고, 공성추 양옆으로 몰려 들어간다.
 //   성 안뜰의 물대포 2문이 성문으로 몰려오는 병사를 쏘아 뒤로 밀어낸다 (성문 가까이 있다고 유리하지 않게).
+// - 문이 부서지는 순간 성 안에서 기마병(4명, 200명 넘으면 6명)이 차례로 쏟아져 나와 seed 로 정한 길을 따라
+//   공성추 옆으로 빠져나가 사다리 앞 무리를 휘젓고 텅 빈 들판 뒤쪽으로 빠져 사라진다. 말에 닿은 병사는 앞으로 크게 밀려나고
+//   자주 넘어진다 (사다리 위 병사는 닿지 않는다). 말은 움직이지 않는 몸처럼 다른 병사와 겹치지 않으며,
+//   기마병에 밀린 것은 맞은 횟수(최대 2번)에 넣지 않는다. 기마병은 한 번 휘젓고 떠나므로 경기는 언제나 끝난다.
 // - 도착: 성벽 쪽은 사다리에서 성벽 위 통로(도착 구역)에 발을 디딘 순간, 성문 쪽은 문 안쪽 도착선을 넘은 순간.
 //   두 길의 도착을 시각 순서대로 합쳐서 순위를 정하고, 한 사람은 한 번만 센다.
 // - 방어: 양쪽 탑의 물대포 4문이 사다리 쪽 무리와 사다리를 오르는 병사에게 물을 쏜다. 땅에서 맞으면 넘어지거나
@@ -93,6 +97,12 @@ const VERSIONS = {
     gateHitCenter: 0.8,
     gateHitSplash: 0.55,
     gatePush: [1.6, 2.6],
+    // 기마병 (문이 부서지면 성 안에서 쏟아져 나온다)
+    cavSpeed: [7.2, 8.4], // 말의 빠르기 (먼저 나간 말이 더 빠르게 정해 서로 따라잡지 않는다)
+    cavGap: 0.7, // 같은 쪽에서 다음 말이 나가기까지 (s)
+    cavR: 0.55, // 말 몸통(앞·뒤 두 원)의 반지름
+    cavHalf: 0.65, // 말 몸통 두 원이 가운데에서 떨어진 거리
+    cavPush: [2.0, 3.5], // 말에 밀려나는 거리
     // 사다리 꼭대기 수비군의 물바가지
     guardCool: [0.3, 0.7], // 한 번 붓고 다시 붓기까지
     guardTime: 0.3, // 붓는 데 걸리는 시간 (그동안 꼭대기에서 버틴다)
@@ -332,6 +342,18 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
   const climbers = Array.from({ length: NLANE }, () => []); // 줄마다, 위에 있는 사람부터
   const onLadder = (k) => climbers[2 * k].length + climbers[2 * k + 1].length;
 
+  // 기마병: 문이 부서지면 만든다. pts 는 지나갈 자리들, 마지막 자리에 닿으면 들판 밖으로 사라진다.
+  const riders = [];
+  const cavCircles = () => {
+    const list = [];
+    for (const r of riders) {
+      if (!r.on) continue;
+      list.push([r.x + r.hx * P.cavHalf, r.z + r.hz * P.cavHalf, P.cavR]);
+      list.push([r.x - r.hx * P.cavHalf, r.z - r.hz * P.cavHalf, P.cavR]);
+    }
+    return list;
+  };
+
   // 공성추
   const ram = {
     front: WZ - P.ramStart,
@@ -541,7 +563,10 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
     } else if (z[i] > baseZ - 0.3) z[i] = baseZ - 0.3;
   };
   const resolve = () => {
-    const circles = ramCircles();
+    // 움직이지 않는 몸: 공성추(공병 포함)와 달리는 말
+    const circles = ramCircles()
+      .map((cz) => [0, cz, P.ramHalf])
+      .concat(cavCircles());
     for (let iter = 0; iter < ITERS; iter++) {
       buildGrid();
       for (let i = 0; i < n; i++) {
@@ -567,11 +592,11 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
           px += (dx / d) * (r - d) * share;
           pz += (dz / d) * (r - d) * share;
         });
-        // 공성추(공병 포함)는 움직이지 않는 몸
-        for (const cz of circles) {
-          const r = ri + P.ramHalf;
-          const dx = x[i] || (i % 2 ? 1e-3 : -1e-3);
-          const dz = z[i] - cz;
+        // 공성추와 말은 움직이지 않는 몸
+        for (const [ox, oz, or] of circles) {
+          const r = ri + or;
+          const dx = x[i] - ox || (i % 2 ? 1e-3 : -1e-3);
+          const dz = z[i] - oz;
           const d2 = dx * dx + dz * dz;
           if (d2 >= r * r) continue;
           const d = Math.sqrt(d2);
@@ -582,6 +607,22 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
         z[i] += pz;
         clampGround(i);
       }
+    }
+    // 마지막으로 공성추·말 안에 남은 몸이 없게 한 번 더 밀어낸다 (병사끼리 조금 붙는 것보다 우선)
+    for (let i = 0; i < n; i++) {
+      if (!onGround(i) || st[i] === ST.ARRIVED) continue;
+      const ri = radiusOf(i);
+      for (const [ox, oz, or] of circles) {
+        const r = ri + or;
+        const dx = x[i] - ox || (i % 2 ? 1e-3 : -1e-3);
+        const dz = z[i] - oz;
+        const d2 = dx * dx + dz * dz;
+        if (d2 >= r * r) continue;
+        const d = Math.sqrt(d2);
+        x[i] += (dx / d) * (r - d);
+        z[i] += (dz / d) * (r - d);
+      }
+      clampGround(i);
     }
   };
 
@@ -605,8 +646,8 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
     hits[i] < P.maxHits && tick >= guardUntil[i] && !aimed[i];
 
   // 물대포에 맞음: 대포 반대쪽으로 밀려나고, 넘어지거나 비틀거린다
-  const knock = (tick, i, from, push = P.push) => {
-    hits[i]++;
+  const knock = (tick, i, from, push = P.push, count = true) => {
+    if (count) hits[i]++;
     let dx = x[i] - from[0];
     let dz = z[i] - from[2];
     const d = Math.sqrt(dx * dx + dz * dz) || 1;
@@ -641,6 +682,13 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
   const last = Array.from({ length: n }, () => [0, 0, 0]);
   let frames = 0;
   const record = () => {
+    for (const r of riders) {
+      if (!r.on) continue;
+      if (r.from < 0) r.from = frames;
+      r.xs.push(cm(r.x));
+      r.zs.push(cm(r.z));
+      r.hs.push(Math.round(r.hx * 1000), Math.round(r.hz * 1000));
+    }
     for (let i = 0; i < n; i++) {
       const c = [cm(x[i]), cm(y[i]), cm(z[i])];
       const l = last[i];
@@ -664,6 +712,41 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
     gateGuns.forEach((g) => {
       g.next = tick + Math.round((0.5 + rng() * 0.6) * HZ);
     });
+    // 기마병: 양쪽으로 같은 수가 나간다. 같은 쪽에서는 먼저 나간 말이 더 빠르고, 휘젓는 줄(앞뒤 거리)이 달라 서로 겹치지 않는다.
+    const per = n > 200 ? 3 : 2;
+    for (const sd of [-1, 1]) {
+      const v0 = between(rng, P.cavSpeed);
+      for (let k = 0; k < per; k++) {
+        const band = baseZ - 3.5 - k * 2.8 - rng() * 1.2;
+        const pts = [
+          [sd * 1.8, WZ + P.walk + 3], // 성 안뜰에서
+          [sd * 1.8, WZ - 6.8], // 공성추 옆으로 빠져나와
+          [sd * (P.innerLadder - 1 + rng() * 2.5), band], // 사다리 앞 무리로 뛰어들고
+          [sd * (FW / 2 - 1.5 - rng() * 3), band + (rng() - 0.5) * 2], // 옆으로 휘저은 뒤
+          [sd * (P.innerLadder + 2 + rng() * 5), band - 2.5 - rng() * 2.5], // 다시 안쪽으로 꺾었다가
+          [sd * (FW / 2 - 3 - rng() * 4), -14 - rng() * 4], // 텅 빈 들판 뒤쪽으로 빠져 사라진다
+        ];
+        riders.push({
+          pts,
+          seg: 0,
+          x: pts[0][0],
+          z: pts[0][1],
+          hx: 0,
+          hz: -1,
+          v: v0 - k * 0.45,
+          depart:
+            tick +
+            Math.round((k * P.cavGap + (sd > 0 ? P.cavGap / 2 : 0)) * HZ),
+          on: false,
+          done: false,
+          hit: new Set(),
+          from: -1,
+          xs: [],
+          zs: [],
+          hs: [], // 바라보는 방향 (x, z 를 1000 배)
+        });
+      }
+    }
     const cand = [];
     for (let i = 0; i < n; i++) {
       if (st[i] !== ST.RUN && st[i] !== ST.QUEUE) continue;
@@ -692,6 +775,72 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
       (tick - ram.arriveTick) % Math.round(P.ramStrike * HZ) === 0
     ) {
       ram.strikes.push(tick);
+    }
+
+    // 0-2) 기마병: 정해진 자리들을 차례로 지나 달리고, 닿은 병사를 앞으로 크게 밀어낸다
+    if (riders.length) {
+      buildGrid();
+      for (const r of riders) {
+        if (r.done || tick < r.depart) continue;
+        r.on = true;
+        // 앞이 빽빽하면 말도 밀고 나가느라 느려진다
+        let crowd = 0;
+        const fx = r.x + r.hx * (P.cavHalf + 0.6);
+        const fz = r.z + r.hz * (P.cavHalf + 0.6);
+        neighbors(fx, fz, (j) => {
+          if (!onGround(j)) return;
+          if ((x[j] - fx) ** 2 + (z[j] - fz) ** 2 < 1.3 * 1.3) crowd++;
+        });
+        let left = r.v * Math.max(0.3, 1 - 0.16 * crowd) * DT;
+        while (left > 0 && r.seg < r.pts.length - 1) {
+          const [tx, tz] = r.pts[r.seg + 1];
+          const dx = tx - r.x;
+          const dz = tz - r.z;
+          const d = Math.sqrt(dx * dx + dz * dz);
+          if (d < 1e-9) {
+            r.seg++;
+            continue;
+          }
+          const s2 = Math.min(d, left);
+          r.hx = dx / d;
+          r.hz = dz / d;
+          r.x += r.hx * s2;
+          r.z += r.hz * s2;
+          left -= s2;
+          if (s2 >= d) r.seg++;
+        }
+        if (r.seg >= r.pts.length - 1) {
+          r.on = false;
+          r.done = true;
+          continue;
+        }
+        for (const sg of [1, -1]) {
+          const cx = r.x + sg * r.hx * P.cavHalf;
+          const cz = r.z + sg * r.hz * P.cavHalf;
+          neighbors(cx, cz, (j) => {
+            const s0 = st[j];
+            if (
+              s0 !== ST.RUN &&
+              s0 !== ST.QUEUE &&
+              s0 !== ST.GATE &&
+              s0 !== ST.READY
+            )
+              return;
+            if (r.hit.has(j)) return;
+            const rr = P.cavR + P.radius + 0.1;
+            if ((x[j] - cx) ** 2 + (z[j] - cz) ** 2 >= rr * rr) return;
+            r.hit.add(j);
+            // 말 뒤쪽에서 병사 쪽으로: 옆과 앞으로 촥 밀려난다
+            knock(
+              tick,
+              j,
+              [r.x - r.hx * 1.2, 0, r.z - r.hz * 1.2],
+              P.cavPush,
+              false
+            );
+          });
+        }
+      }
     }
 
     // 1) 사다리: 줄마다 위에 있는 사람부터 움직여서 앞사람을 추월하지 않게 한다
@@ -1144,6 +1293,10 @@ async function simulate({ seed, n, winnerCount, version = LATEST }) {
     gunShots: gunShots.filter((s) => s[2] <= tick),
     gateShots: gateShots.filter((s) => s[2] <= tick),
     dumps: dumps.filter((s) => s[2] <= tick),
+    // 기마병: from 번째 프레임부터 프레임마다의 자리 (cm) 와 바라보는 방향
+    cavalry: riders
+      .filter((r) => r.from >= 0)
+      .map((r) => ({ from: r.from, x: r.xs, z: r.zs, h: r.hs })),
     arrivals,
     pos,
     order,

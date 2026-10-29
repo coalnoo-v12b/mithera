@@ -37,6 +37,20 @@ function eachFrame(rec, fn) {
     );
   }
 }
+// f 프레임의 말 몸통 두 원 [x, z] (말 하나당 앞·뒤)
+const horsesAt = (rec, f) =>
+  (rec.cavalry || []).flatMap((c) => {
+    const k = f - c.from;
+    if (k < 0 || k >= c.x.length) return [];
+    const X = c.x[k] / 100;
+    const Z = c.z[k] / 100;
+    const hx = c.h[k * 2] / 1000;
+    const hz = c.h[k * 2 + 1] / 1000;
+    return [
+      [X + hx * 0.65, Z + hz * 0.65],
+      [X - hx * 0.65, Z - hz * 0.65],
+    ];
+  });
 const posAt = (rec, i, f) => {
   const p = [0, 0, 0];
   for (let k = 0; k <= f; k++)
@@ -121,17 +135,26 @@ describe('성벽 탈환전 시뮬레이션', () => {
     }
   );
 
-  it('들어온 뒤에는 사라지는 것 말고 아무 일도 없고, 한 병사는 최대 2번까지만 맞는다', () => {
+  it('들어온 뒤에는 사라지는 것 말고 아무 일도 없고, 물에는 한 병사가 최대 2번까지만 맞는다', () => {
     const arrivedAt = new Map(rec.arrivals.map(([i, t]) => [i, t]));
     const prev = new Map();
     const hits = new Map();
+    const per = rec.hz / rec.fps;
+    // 기마병에 밀린 것은 맞은 횟수에 넣지 않는다 (그 순간 말이 바로 옆에 있었다)
+    const byHorse = (t, i) => {
+      const f = Math.min(rec.frames - 1, Math.round(t / per));
+      const [x, , z] = posAt(rec, i, f);
+      return horsesAt(rec, f).some(
+        ([hx, hz]) => Math.hypot(x - hx, z - hz) < 2.2
+      );
+    };
     for (const [t, i, s] of rec.events) {
       if (arrivedAt.has(i) && t > arrivedAt.get(i)) expect(s).toBe(ST.GONE);
-      // 물대포에 넘어지거나 밀려남, 물총에 떨어짐 (떨어진 뒤 눕는 것은 같은 한 번)
+      // 물대포에 넘어지거나 밀려남, 물총·물바가지에 떨어짐 (떨어진 뒤 눕는 것은 같은 한 번)
       const hit =
-        s === ST.PUSH ||
         s === ST.FALL ||
-        (s === ST.DOWN && prev.get(i) !== ST.FALL);
+        ((s === ST.PUSH || (s === ST.DOWN && prev.get(i) !== ST.FALL)) &&
+          !byHorse(t, i));
       if (hit) hits.set(i, (hits.get(i) || 0) + 1);
       prev.set(i, s);
     }
@@ -197,6 +220,33 @@ describe('성벽 탈환전 시뮬레이션', () => {
       const next = r.events.find((e) => e[1] === who && e[0] >= hit);
       if (ok) expect(next[2]).toBe(ST.FALL);
       else expect(next[2]).toBe(ST.STEP);
+    }
+  });
+
+  it('문이 부서지면 기마병이 나와 휘젓고, 서 있는 병사는 말과 겹치지 않는다', async () => {
+    for (const [n, riders] of [
+      [120, 4],
+      [300, 6],
+    ]) {
+      const r = JSON.parse(
+        (await siege.simulate({ seed, n, winnerCount: 30 })).raw
+      );
+      const per = r.hz / r.fps;
+      expect(r.cavalry).toHaveLength(riders);
+      for (const c of r.cavalry)
+        expect(c.from * per).toBeGreaterThanOrEqual(r.ram.breakTick);
+      const standing = [ST.READY, ST.RUN, ST.QUEUE, ST.GATE, ST.PUSH];
+      eachFrame(r, (f, tick, st, P) => {
+        const hs = horsesAt(r, f);
+        if (!hs.length) return;
+        for (let i = 0; i < r.n; i++) {
+          if (!standing.includes(st[i]) || P[i][1] > 0.3) continue;
+          for (const [hx, hz] of hs)
+            expect(Math.hypot(P[i][0] - hx, P[i][2] - hz)).toBeGreaterThan(
+              0.55 + 0.38 - 0.15
+            );
+        }
+      });
     }
   });
 

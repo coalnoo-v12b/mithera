@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { clampPan } from '../three/clampPan.js';
-import { clack, loop, pop } from '../sfx.js';
+import { clack, horn, loop, pop } from '../sfx.js';
 import { ROUTE, ST, TEAM_COLORS } from './decode.js';
 
 // 성벽 탈환전 녹화 재생. 서버가 끝까지 돌린 병사 시뮬레이션 기록을 그대로 보여줄 뿐,
@@ -1235,6 +1235,157 @@ function GateDoors({ rec, decoded, playRef, stone }) {
   );
 }
 
+/* ---------------- 기마병 ---------------- */
+
+// 기록에 남은 자리·방향 그대로 달린다. 말발굽 소리는 달리는 말 수만큼 커진다.
+function Horse({ track, playRef, k }) {
+  const ref = useRef();
+  const legRefs = useRef([]);
+  const strideRef = useRef(0);
+  const lastRef = useRef(null);
+  const len = track.x.length;
+  useFrame(() => {
+    const g = ref.current;
+    if (!g) return;
+    const f = playRef.current.f;
+    const kf = f - track.from;
+    if (kf < 0 || kf > len - 1) {
+      g.visible = false;
+      return;
+    }
+    g.visible = true;
+    const k0 = Math.floor(kf);
+    const k1 = Math.min(len - 1, k0 + 1);
+    const t = kf - k0;
+    const px = (track.x[k0] + (track.x[k1] - track.x[k0]) * t) / 100;
+    const pz = (track.z[k0] + (track.z[k1] - track.z[k0]) * t) / 100;
+    g.position.set(px, 0, pz);
+    const hx = track.h[k0 * 2] + (track.h[k1 * 2] - track.h[k0 * 2]) * t;
+    const hz =
+      track.h[k0 * 2 + 1] + (track.h[k1 * 2 + 1] - track.h[k0 * 2 + 1]) * t;
+    g.rotation.y = Math.atan2(hx, hz);
+    // 달린 거리만큼 다리를 굴린다
+    const last = lastRef.current;
+    if (last) strideRef.current += Math.hypot(px - last[0], pz - last[1]);
+    lastRef.current = [px, pz];
+    const ph = strideRef.current * 3.2 + k;
+    legRefs.current.forEach((leg, j) => {
+      if (leg)
+        leg.rotation.x =
+          Math.sin(ph + (j % 2 ? Math.PI : 0) + (j > 1 ? 0.6 : 0)) * 0.7;
+    });
+    g.position.y = Math.abs(Math.sin(ph)) * 0.12;
+    // 사라질 때 작아진다
+    const fade = Math.min(1, (len - 1 - kf) / 4);
+    g.scale.setScalar(Math.max(0.01, fade));
+  });
+  const coat = k % 3 === 0 ? '#f2efe8' : k % 3 === 1 ? '#7a4b2a' : '#3b2a20';
+  return (
+    <group ref={ref} visible={false}>
+      {/* 말 몸통·목·머리 */}
+      <mesh position={[0, 1.15, 0]} rotation-x={Math.PI / 2}>
+        <capsuleGeometry args={[0.42, 1.2, 6, 12]} />
+        <meshStandardMaterial color={coat} roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 1.65, 0.85]} rotation-x={-0.6}>
+        <capsuleGeometry args={[0.2, 0.55, 4, 10]} />
+        <meshStandardMaterial color={coat} roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 1.95, 1.18]} rotation-x={0.5}>
+        <boxGeometry args={[0.28, 0.32, 0.6]} />
+        <meshStandardMaterial color={coat} roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 1.95, 0.75]}>
+        <boxGeometry args={[0.08, 0.5, 0.5]} />
+        <meshStandardMaterial color="#2a1d14" />
+      </mesh>
+      {/* 다리 넷 */}
+      {[
+        [0.22, 0.6],
+        [-0.22, 0.6],
+        [0.22, -0.6],
+        [-0.22, -0.6],
+      ].map(([lx, lz], j) => (
+        <group
+          key={j}
+          ref={(el) => {
+            legRefs.current[j] = el;
+          }}
+          position={[lx, 0.95, lz]}
+        >
+          <mesh position={[0, -0.45, 0]}>
+            <cylinderGeometry args={[0.09, 0.07, 0.9, 8]} />
+            <meshStandardMaterial color={coat} roughness={0.7} />
+          </mesh>
+        </group>
+      ))}
+      {/* 마구 */}
+      <mesh position={[0, 1.58, -0.05]}>
+        <boxGeometry args={[0.9, 0.12, 0.8]} />
+        <meshStandardMaterial color="#c0392b" />
+      </mesh>
+      {/* 기수: 주황 갑옷, 깃발 달린 긴 막대 */}
+      <group position={[0, 1.55, -0.05]}>
+        <mesh position={[0, 0.45, 0]}>
+          <capsuleGeometry args={[0.24, 0.3, 4, 10]} />
+          <meshStandardMaterial color="#f08a2c" />
+        </mesh>
+        <mesh position={[0, 0.92, 0]}>
+          <sphereGeometry args={[0.21, 12, 10]} />
+          <meshStandardMaterial color="#f1c8a3" />
+        </mesh>
+        <mesh position={[0, 0.98, 0]}>
+          <sphereGeometry
+            args={[0.25, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55]}
+          />
+          <meshStandardMaterial
+            color="#e85d1a"
+            metalness={0.4}
+            roughness={0.35}
+          />
+        </mesh>
+        <group position={[0.3, 0.55, 0.2]} rotation-x={Math.PI / 2 - 0.35}>
+          <mesh>
+            <cylinderGeometry args={[0.04, 0.04, 2.6, 6]} />
+            <meshStandardMaterial color="#6b4423" />
+          </mesh>
+          <mesh position={[0.22, 1.05, 0]}>
+            <boxGeometry args={[0.42, 0.3, 0.02]} />
+            <meshStandardMaterial color="#2446a6" side={THREE.DoubleSide} />
+          </mesh>
+        </group>
+      </group>
+    </group>
+  );
+}
+
+function Cavalry({ rec, playRef }) {
+  const riders = useMemo(() => rec.cavalry || [], [rec]);
+  const soundRef = useRef(null);
+  const hornRef = useRef(false);
+  useEffect(() => {
+    soundRef.current = loop('roll');
+    return () => soundRef.current.stop();
+  }, []);
+  useFrame(() => {
+    const pl = playRef.current;
+    const snd = soundRef.current;
+    if (!snd) return;
+    let on = 0;
+    for (const r of riders)
+      if (pl.f >= r.from && pl.f <= r.from + r.x.length - 1) on++;
+    if (on && !hornRef.current && pl.playing) {
+      hornRef.current = true;
+      horn();
+    }
+    // 말발굽: 낮고 빠르게 덜컹거리는 소리
+    snd.set(pl.playing && !pl.done ? Math.min(1, on * 0.25) : 0, 0.55);
+  });
+  return riders.map((track, k) => (
+    <Horse key={k} k={k} track={track} playRef={playRef} />
+  ));
+}
+
 /* ---------------- 성과 들판 ---------------- */
 
 function stoneTexture() {
@@ -1789,7 +1940,12 @@ function Hud({ rec, names, me, busRef, tagRef, follow, onFollow }) {
             : '공성추가 성문을 두드리는 중'}
         </small>
       </div>
-      {gate && <div className="siege-gate">성문 돌파!</div>}
+      {gate && (
+        <div className="siege-gate">
+          성문 돌파!
+          {(rec.cavalry || []).length > 0 && <small>기마병 출격!</small>}
+        </div>
+      )}
       {latest !== undefined && (
         <div className="siege-bubble" key={list.length}>
           <b>{names[latest[0]]}</b> 님{' '}
@@ -1953,6 +2109,7 @@ export default function SiegeStage({
           tagRef={tagRef}
         />
         <Water rec={recording} decoded={decoded} playRef={playRef} />
+        <Cavalry rec={recording} playRef={playRef} />
         <Sounds decoded={decoded} playRef={playRef} />
         <CameraRig
           rec={recording}

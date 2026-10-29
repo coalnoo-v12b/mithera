@@ -1471,6 +1471,13 @@ label {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   animation: siege-gate 2.6s ease forwards;
 }
+.siege-gate small {
+  display: block;
+  text-align: center;
+  font-size: 15px;
+  color: #ffd0a0;
+  letter-spacing: 0.02em;
+}
 @keyframes siege-gate {
   0% {
     opacity: 0;
