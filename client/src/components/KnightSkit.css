@@ -1,0 +1,749 @@
+/* 로그인 화면 15초 콩트 (KnightSkit.jsx)
+   Vox 설명 영상 스타일: 오려 붙인 캐릭터, 형광펜 강조, 손그림 표시, 카메라 확대
+   상자 없이 페이지 배경 위에 바로 그리고, 글자·라벨 색은 사이트 테마(--text, --bg, --card)를 따른다
+   타임라인: 요소마다 --in(나타남)·--out(사라짐) 초를 JSX에서 넘긴다. 카메라·기사 자세만 15초 키프레임 */
+.skit {
+  --sk-ink: var(--text);
+  --sk-paper: var(--bg);
+  --sk-dark: #1d1b18; /* 노란 바탕 위 글자는 테마와 상관없이 진한 색 */
+  --sk-yellow: #ffd426;
+  --sk-red: #e5432f;
+  --sk-blue: #3b82f6;
+  --sk-pop: cubic-bezier(0.2, 0.9, 0.3, 1.25);
+  position: relative;
+  margin: 0;
+  text-align: left;
+  color: var(--sk-ink);
+}
+.sk-stage {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  container-type: inline-size;
+  overflow: hidden;
+}
+/* 이미지를 다 받기 전에는 멈춰 둔다 */
+.sk-stage:not(.is-playing),
+.sk-stage:not(.is-playing) * {
+  animation-play-state: paused !important;
+}
+
+/* 공통: 나타나기·사라지기 */
+.sk-show {
+  animation:
+    sk-in 0.42s var(--sk-pop) var(--in, 0s) both,
+    sk-out 0.3s ease-in var(--out, 999s) forwards;
+}
+.sk-pop {
+  animation: sk-pop 0.5s var(--sk-pop) var(--in, 0s) both;
+}
+@keyframes sk-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.6em) scale(0.96);
+  }
+}
+@keyframes sk-out {
+  to {
+    opacity: 0;
+    transform: translateY(-0.4em);
+  }
+}
+@keyframes sk-pop {
+  from {
+    opacity: 0;
+    transform: scale(1.6) rotate(-4deg);
+  }
+}
+/* 손그림 선: pathLength="1" 인 path를 그려 나간다 */
+@keyframes sk-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* 카메라: 6~7.4초 기사에게 확대, 10초 뒤로 빠지며 종자 등장 */
+.sk-world {
+  position: absolute;
+  inset: 0;
+  /* 바닥 기준으로 확대해서 상자 없는 화면 아래로 발이 잘리지 않게 한다 */
+  transform-origin: 32% 98%;
+  animation: sk-camera 15s cubic-bezier(0.6, 0, 0.2, 1) both;
+}
+@keyframes sk-camera {
+  0%,
+  40% {
+    transform: none;
+  }
+  49%,
+  64% {
+    transform: scale(1.15) translate(3%, 0);
+  }
+  70%,
+  100% {
+    transform: scale(0.94);
+  }
+}
+
+/* 기사 */
+.sk-knight {
+  position: absolute;
+  left: 8%;
+  bottom: 2%;
+  height: 80%;
+  aspect-ratio: 393 / 560;
+  z-index: 2;
+  transform: rotate(-4deg);
+  transform-origin: 50% 100%;
+  animation: sk-knight 15s ease-in-out both;
+}
+@keyframes sk-knight {
+  0% {
+    opacity: 0;
+    transform: translateY(30%) scale(0.6) rotate(-14deg);
+  }
+  3.3% {
+    opacity: 1;
+    transform: translateY(-3%) scale(1.04) rotate(-5deg);
+  }
+  5% {
+    transform: rotate(-7deg);
+  }
+  /* 쓸데없이 비장하게 가슴을 편다 */
+  10%,
+  18.6% {
+    transform: rotate(-7deg) scale(1.02);
+  }
+  /* 3.3초: 무기로 위를 가리킨다 */
+  22% {
+    transform: translateY(-5%) rotate(-1deg) scale(1.04);
+  }
+  24%,
+  38.6% {
+    transform: translateY(-3%) rotate(-2deg) scale(1.03);
+  }
+  41.3% {
+    transform: rotate(-6deg);
+  }
+  49.3% {
+    transform: rotate(-9deg) scale(1.04);
+  }
+  53.3%,
+  66.6% {
+    transform: rotate(-7deg) scale(1.03);
+  }
+  70.6%,
+  100% {
+    transform: rotate(-4deg);
+  }
+}
+.sk-breathe {
+  position: relative;
+  height: 100%;
+  transform-origin: 50% 100%;
+  animation: sk-breathe 2.6s ease-in-out infinite;
+}
+@keyframes sk-breathe {
+  50% {
+    transform: scaleY(1.015);
+  }
+}
+.sk-knight img,
+.sk-squire img {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  /* 오려 붙인 종이 그림자 */
+  filter: drop-shadow(0 0.5cqw 0 rgba(0, 0, 0, 0.16))
+    drop-shadow(0 1.4cqw 1.4cqw rgba(0, 0, 0, 0.22));
+}
+
+/* 망토: 몸 뒤에서 살랑이다가 3.1초부터 크게 펄럭인다 */
+.sk-cape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.sk-cape-flap {
+  transform-box: view-box;
+  transform-origin: 215px 245px;
+  animation:
+    sk-sway 2.4s ease-in-out infinite,
+    sk-flap 0.42s ease-in-out 3.1s 7 alternate;
+}
+.sk-cape-back {
+  fill: #b52a33;
+  stroke: #fff;
+  stroke-width: 9;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+.sk-cape-fold {
+  fill: none;
+  stroke: #7d1a22;
+  stroke-width: 5;
+  stroke-linecap: round;
+  opacity: 0.5;
+}
+@keyframes sk-sway {
+  0%,
+  100% {
+    transform: rotate(1deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+@keyframes sk-flap {
+  from {
+    transform: rotate(2deg);
+  }
+  to {
+    transform: rotate(13deg) scale(1.18, 1.04);
+  }
+}
+
+/* 펄럭이는 바람 선, 위를 가리키는 화살표, 반짝임 */
+.sk-wind {
+  position: absolute;
+  left: 2%;
+  top: 50%;
+  width: 9cqw;
+}
+.sk-wind path,
+.sk-arrow path,
+.sk-fist path,
+.sk-spark-line path:not(.sk-grid),
+.sk-circled path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.sk-wind path {
+  stroke: var(--sk-ink);
+  stroke-width: 3;
+  animation: sk-draw 0.4s ease-out calc(var(--in) + 0.1s) both;
+}
+.sk-wind path:nth-child(2) {
+  animation-delay: calc(var(--in) + 0.2s);
+}
+.sk-wind path:nth-child(3) {
+  animation-delay: calc(var(--in) + 0.3s);
+}
+.sk-arrow {
+  position: absolute;
+  left: 13%;
+  top: 0;
+  width: 6cqw;
+  height: 12cqw;
+  overflow: visible;
+}
+.sk-arrow path {
+  stroke: var(--sk-red);
+  stroke-width: 4;
+  animation: sk-draw 0.45s ease-out calc(var(--in) + 0.1s) both;
+}
+.sk-arrow path + path {
+  animation-delay: calc(var(--in) + 0.5s);
+}
+.sk-sparks {
+  position: absolute;
+  left: 7%;
+  top: 6%;
+  width: 24%;
+  height: 30%;
+}
+.sk-sparks i {
+  position: absolute;
+  font-style: normal;
+  font-size: 3.4cqw;
+  color: var(--sk-yellow);
+  -webkit-text-stroke: 0.18cqw var(--sk-dark);
+  animation: sk-twinkle 0.7s ease-in-out infinite alternate;
+}
+.sk-sparks i:nth-child(1) {
+  left: 4%;
+  top: 60%;
+}
+.sk-sparks i:nth-child(2) {
+  left: 82%;
+  top: 40%;
+  animation-delay: 0.25s;
+}
+.sk-sparks i:nth-child(3) {
+  left: 44%;
+  top: 0;
+  animation-delay: 0.5s;
+}
+@keyframes sk-twinkle {
+  to {
+    scale: 0.55;
+    rotate: 30deg;
+  }
+}
+
+/* 6.3초: 기사 뒤 형광 노랑 집중선 (하프톤 점 포함) */
+.sk-burst {
+  position: absolute;
+  left: 30%;
+  top: 52%;
+  /* 상자가 없으므로 무대 가장자리에 닿기 전에 흐려지는 크기 */
+  width: 80cqw;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+        color-mix(in srgb, var(--text) 16%, transparent) 1px,
+        transparent 1.4px
+      )
+      0 0 / 1.4cqw 1.4cqw,
+    repeating-conic-gradient(
+      rgba(255, 212, 38, 0.55) 0 7deg,
+      transparent 7deg 15deg
+    );
+  -webkit-mask: radial-gradient(closest-side, #000 25%, transparent 75%);
+  mask: radial-gradient(closest-side, #000 25%, transparent 75%);
+  animation:
+    sk-in 0.42s var(--sk-pop) var(--in, 0s) both,
+    sk-out 0.3s ease-in var(--out, 999s) forwards,
+    sk-spin 18s linear infinite;
+}
+@keyframes sk-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* 종자: 10초에 기사 뒤에서 미끄러져 나오고, 11.1초부터 영혼 없이 고개 까딱 */
+.sk-squire,
+.sk-sweat {
+  position: absolute;
+  left: 47%;
+  bottom: 4%;
+  height: 64%;
+  aspect-ratio: 300 / 560;
+}
+.sk-squire {
+  z-index: 1;
+  animation: sk-squire-in 0.7s var(--sk-pop) 10s both;
+}
+@keyframes sk-squire-in {
+  from {
+    opacity: 0;
+    transform: translateX(-60%) scale(0.9) rotate(-6deg);
+  }
+}
+.sk-nod {
+  height: 100%;
+  transform-origin: 50% 95%;
+  animation: sk-nod 0.5s ease-in-out 11.1s 3;
+}
+@keyframes sk-nod {
+  50% {
+    transform: rotate(5deg) translateY(2%) scaleY(0.97);
+  }
+}
+.sk-sweat {
+  z-index: 3;
+  pointer-events: none;
+}
+.sk-sweat i {
+  position: absolute;
+  width: 2.8cqw;
+  aspect-ratio: 1;
+  background: #4fb3ff;
+  border: max(1.5px, 0.3cqw) solid var(--sk-dark);
+  border-radius: 0 50% 50% 50%;
+  rotate: 45deg;
+  animation: sk-drip 0.9s ease-in 10.6s infinite;
+}
+.sk-sweat i:nth-child(1) {
+  left: 2%;
+  top: 16%;
+}
+.sk-sweat i:nth-child(2) {
+  left: 88%;
+  top: 20%;
+  animation-delay: 10.85s;
+}
+.sk-sweat i:nth-child(3) {
+  left: 76%;
+  top: 4%;
+  animation-delay: 11.1s;
+}
+.sk-sweat i:nth-child(4) {
+  left: 14%;
+  top: 2%;
+  animation-delay: 11.35s;
+}
+@keyframes sk-drip {
+  from {
+    translate: 0 0;
+    opacity: 1;
+  }
+  to {
+    translate: 0 4cqw;
+    opacity: 0;
+  }
+}
+
+/* 13초: 종자가 손 높이에서 주먹을 쥐고 기사 뒤통수 쪽으로 꿀밤 시늉. 머리 앞에서 멈춘다 */
+.sk-fist {
+  position: absolute;
+  left: 47%;
+  top: 63%;
+  z-index: 4;
+  font-size: 6cqw;
+  line-height: 1;
+}
+.sk-fist span {
+  display: inline-block;
+  animation: sk-bonk 0.55s ease-in-out 13.25s 2;
+}
+.sk-fist svg {
+  position: absolute;
+  left: 70%;
+  top: 70%;
+  width: 0.8em;
+}
+.sk-fist path {
+  stroke: var(--sk-ink);
+  stroke-width: 3;
+  animation: sk-draw 0.3s ease-out 13.3s both;
+}
+@keyframes sk-bonk {
+  55% {
+    translate: -5cqw -16cqw;
+    rotate: -25deg;
+  }
+  70% {
+    translate: -4cqw -15cqw;
+    rotate: -18deg;
+  }
+}
+
+/* 화면 위 글자 */
+.sk-chapter {
+  position: absolute;
+  top: 3%;
+  right: 3%;
+  font-size: max(10px, 2.2cqw);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.sk-chapter b {
+  margin-right: 0.4em;
+  padding: 0.15em 0.45em;
+  background: var(--sk-ink);
+  color: var(--sk-paper);
+  letter-spacing: 0.06em;
+}
+.sk-caption {
+  position: absolute;
+  left: 52%;
+  right: 4%;
+  top: 13%;
+  font-size: max(13px, 4.1cqw);
+  font-weight: 800;
+  line-height: 1.36;
+  letter-spacing: -0.03em;
+  word-break: keep-all;
+}
+.sk-caption p {
+  margin: 0 0 0.3em;
+}
+.sk-who {
+  display: inline-block;
+  margin-bottom: 0.6em;
+  padding: 0.25em 0.6em;
+  background: var(--sk-ink);
+  color: var(--sk-paper);
+  font-size: max(10px, 2.3cqw);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+/* 형광펜: 노랑이 칠해지면서 글자가 진한 색으로 바뀐다 (다크 테마에서도 읽히게) */
+.sk-hl {
+  padding: 0 0.1em;
+  color: inherit;
+  background: linear-gradient(var(--sk-yellow), var(--sk-yellow)) no-repeat 0
+    0 / 0% 100%;
+  animation: sk-hl 0.45s ease-out var(--hl) both;
+}
+@keyframes sk-hl {
+  to {
+    background-size: 100% 100%;
+    color: var(--sk-dark);
+  }
+}
+.sk-spark-line {
+  display: block;
+  width: 30cqw;
+  margin-top: 0.4em;
+  overflow: visible;
+}
+.sk-spark-line .sk-grid {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text) 25%, transparent);
+  stroke-width: 1;
+}
+.sk-spark-line path:not(.sk-grid) {
+  stroke: var(--sk-blue);
+  stroke-width: 3.5;
+  animation: sk-draw 0.7s ease-out calc(var(--in) + 0.1s) both;
+}
+.sk-spark-line circle {
+  fill: var(--sk-blue);
+  animation: sk-in 0.3s var(--sk-pop) calc(var(--in) + 0.75s) both;
+}
+.sk-big {
+  font-size: max(16px, 5.6cqw);
+  line-height: 1.2;
+}
+.sk-circled {
+  position: relative;
+  display: inline-block;
+  color: var(--sk-red);
+}
+.sk-circled svg {
+  position: absolute;
+  left: -22%;
+  top: -24%;
+  width: 144%;
+  height: 150%;
+  overflow: visible;
+}
+.sk-circled path {
+  stroke: var(--sk-red);
+  stroke-width: 2.6;
+  animation: sk-draw 0.55s ease-out 8s both;
+}
+
+/* 라벨 */
+.sk-tag {
+  display: inline-block;
+  padding: 0.3em 0.6em;
+  background: var(--card);
+  border: max(1.5px, 0.3cqw) solid var(--sk-ink);
+  font-size: max(10px, 2.4cqw);
+  font-weight: 800;
+  white-space: nowrap;
+}
+.sk-tag b {
+  margin-right: 0.3em;
+  color: var(--sk-red);
+}
+.sk-tag-knight {
+  position: absolute;
+  left: 3%;
+  bottom: 5%;
+  z-index: 5;
+}
+.sk-card {
+  position: absolute;
+  right: 3%;
+  bottom: 5%;
+  z-index: 5;
+  display: grid;
+  gap: 0.6cqw;
+  justify-items: end;
+}
+.sk-gauge {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.3em 0.6em;
+  background: var(--sk-ink);
+  color: var(--sk-paper);
+  font-size: max(10px, 2.3cqw);
+  font-weight: 800;
+}
+.sk-gauge > i {
+  width: 9cqw;
+  height: 0.9em;
+  border: 1px solid var(--sk-paper);
+}
+.sk-gauge > i > i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--sk-yellow);
+  animation: sk-drain 0.9s ease-in 11s both;
+}
+@keyframes sk-drain {
+  from {
+    width: 100%;
+  }
+}
+.sk-gauge b {
+  color: var(--sk-red);
+  background: var(--sk-paper);
+  padding: 0 0.3em;
+}
+
+/* 종자 말풍선, 속마음 메모, 꿀밤 주석 */
+.sk-bubble {
+  position: absolute;
+  left: 60%;
+  top: 12%;
+  padding: 0.45em 0.8em;
+  background: var(--card);
+  border: max(1.5px, 0.35cqw) solid var(--sk-ink);
+  border-radius: 1em;
+  font-size: max(13px, 3.8cqw);
+  font-weight: 800;
+}
+.sk-bubble::after {
+  content: '';
+  position: absolute;
+  left: 18%;
+  bottom: -0.7em;
+  width: 0.9em;
+  height: 0.9em;
+  background: var(--card);
+  border-right: inherit;
+  border-bottom: inherit;
+  rotate: 45deg;
+}
+.sk-thought {
+  position: absolute;
+  left: 52%;
+  right: 4%;
+  top: 13%;
+  rotate: 2deg;
+  padding: 0.8em 0.9em;
+  background: #fff3a6;
+  color: var(--sk-dark);
+  box-shadow: 0 0.6cqw 1.4cqw rgba(0, 0, 0, 0.22);
+  font-size: max(12px, 3.2cqw);
+  font-weight: 700;
+  line-height: 1.4;
+  word-break: keep-all;
+}
+.sk-thought p {
+  margin: 0;
+  font-style: italic;
+}
+.sk-thought .sk-who {
+  margin-bottom: 0.5em;
+  background: var(--sk-red);
+  color: #fff;
+}
+.sk-note {
+  position: absolute;
+  left: 40%;
+  top: 17%;
+  z-index: 5;
+  display: grid;
+  justify-items: center;
+  color: var(--sk-red);
+  font-size: max(10px, 2.4cqw);
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+}
+.sk-note span {
+  font-size: 1.4em;
+}
+
+/* 움직임 줄이기 환경에서 직접 재생하는 버튼 */
+.sk-play {
+  position: absolute;
+  right: 4%;
+  top: 16%;
+  z-index: 6;
+  padding: 10px 18px;
+  border: 2px solid var(--sk-dark);
+  border-radius: 999px;
+  background: var(--sk-yellow);
+  color: var(--sk-dark);
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 3px 0 var(--sk-dark);
+}
+.sk-play:hover,
+.sk-play:focus-visible {
+  translate: 0 1px;
+  box-shadow: 0 2px 0 var(--sk-dark);
+}
+
+/* 끝: 검은 암전 대신 페이지 배경색으로 사라진다 */
+.sk-black {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: var(--bg);
+  opacity: 0;
+  pointer-events: none;
+  animation: sk-blackout 0.8s ease-in 14.2s forwards;
+}
+@keyframes sk-blackout {
+  to {
+    opacity: 1;
+  }
+}
+
+/* 끝 화면 */
+.sk-end {
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--text);
+  text-align: center;
+  animation: fade 0.4s ease-out both;
+}
+.sk-end p {
+  margin: 0;
+  font-size: clamp(16px, 2.6vw, 22px);
+  font-weight: 800;
+}
+.sk-end mark {
+  padding: 0 0.15em;
+  background: var(--sk-yellow);
+  color: var(--sk-dark);
+}
+.sk-end button {
+  padding: 8px 18px;
+  border: 2px solid var(--text);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+}
+.sk-end button:hover,
+.sk-end button:focus-visible {
+  background: var(--text);
+  color: var(--bg);
+}
+
+/* 화면에는 안 보이고 스크린리더만 읽는 대본 */
+.sk-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 움직임 줄이기: 애니메이션은 전역 규칙으로 꺼지므로 기사·종자만 세운 정지 화면을 보여 준다.
+   재생 버튼을 누르면 .sk-forced 가 붙고 전역 규칙에서도 빠져 그대로 재생된다 */
+@media (prefers-reduced-motion: reduce) {
+  .skit:not(.sk-forced) .sk-show:not(.sk-poster),
+  .skit:not(.sk-forced) .sk-pop,
+  .skit:not(.sk-forced) .sk-black {
+    display: none;
+  }
+}

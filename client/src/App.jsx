@@ -10,6 +10,8 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { api, setUnauthorizedHandler } from './api.js';
 import { AppCtx } from './AppContext.js';
 import Auth from './pages/Auth.jsx';
+import AuthOld from './pages/AuthOld.jsx';
+import AuthVox from './pages/AuthVox.jsx';
 import Landing from './pages/Landing.jsx';
 import List from './pages/List.jsx';
 import New from './pages/New.jsx';
@@ -56,6 +58,9 @@ export default function App() {
           <Route path="/new" element={<New />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/draw/:id" element={<Detail />} />
+          {/* 실험용·보관용 로그인 화면. 로그인 상태에서도 미리 볼 수 있게 둔다 */}
+          <Route path="/login-vox" element={<AuthVox />} />
+          <Route path="/login-old" element={<AuthOld />} />
           <Route path="/lab/lotto" element={lab('lotto')} />
           <Route path="/lab/roulette" element={lab('roulette')} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -64,6 +69,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Auth />} />
+          <Route path="/login-vox" element={<AuthVox />} />
+          <Route path="/login-old" element={<AuthOld />} />
           <Route path="/lab/lotto" element={lab('lotto')} />
           <Route path="/lab/roulette" element={lab('roulette')} />
           <Route path="*" element={<Navigate to="/" replace />} />
