@@ -288,6 +288,31 @@ label {
     transform: translateY(-6px);
   }
 }
+/* 로그인 실험 화면 (/login-vox): 넓은 화면은 왼쪽 콩트 + 오른쪽 로그인, 좁으면 위아래 */
+.auth.auth-vox {
+  max-width: 980px;
+  display: grid;
+  gap: 28px;
+  padding-top: 32px;
+}
+.auth-vox .skit {
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+}
+.auth-vox .auth-panel {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+}
+@media (min-width: 860px) {
+  .auth.auth-vox {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    align-items: center;
+    gap: 48px;
+    padding-top: 56px;
+  }
+}
 
 /* 상단 바 */
 #topbar {
@@ -814,7 +839,8 @@ label {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  * {
+  /* 사용자가 직접 재생 버튼을 누른 콩트(.sk-forced)만 예외 */
+  *:not(.sk-forced *) {
     animation: none !important;
     transition: none !important;
   }
