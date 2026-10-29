@@ -1197,7 +1197,7 @@ label {
     min-height: 360px;
   }
   .lp-styles {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -1358,6 +1358,243 @@ label {
 @media (max-width: 600px) {
   .lotto-stage {
     height: 340px;
+  }
+}
+
+/* 성벽 탈환전 (3D 기록 재생) 화면 위 안내 */
+.siege-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: inherit;
+  color: #2a2418;
+}
+.siege-goal {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(255, 248, 230, 0.92);
+  border: 2px solid #c79a4a;
+  font-size: 13px;
+  font-weight: 800;
+}
+.siege-count {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 16px;
+  border-radius: 12px;
+  background: rgba(255, 248, 230, 0.95);
+  border: 2px solid #c79a4a;
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.siege-count b {
+  color: #ef6a1f;
+  font-size: 24px;
+  margin: 0 2px;
+}
+.siege-count small {
+  display: block;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b6150;
+}
+.siege-gate {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 22px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #7a4a22, #5a3417);
+  border: 3px solid #e9b44c;
+  color: #ffe08a;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  animation: siege-gate 2.6s ease forwards;
+}
+.siege-gate small {
+  display: block;
+  text-align: center;
+  font-size: 15px;
+  color: #ffd0a0;
+  letter-spacing: 0.02em;
+}
+@keyframes siege-gate {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.08);
+  }
+  20% {
+    transform: translateX(-50%) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+.siege-bubble {
+  position: absolute;
+  top: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  animation: siege-bubble 1.4s ease forwards;
+}
+.siege-bubble b {
+  color: #ef6a1f;
+}
+@keyframes siege-bubble {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.siege-rank {
+  position: absolute;
+  top: 46px; /* 오른쪽 위 전체화면 버튼 아래 */
+  right: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: 150px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 252, 244, 0.95);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+  font-weight: 700;
+}
+.siege-rank li {
+  display: flex;
+  gap: 10px;
+  padding: 4px 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+.siege-rank li span {
+  min-width: 26px;
+  color: #6b6150;
+}
+.siege-rank li em {
+  flex: 1;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.siege-rank li i {
+  font-style: normal;
+  font-size: 11px;
+  color: #2f6fe0;
+}
+.siege-rank li.new i {
+  color: #fff;
+}
+.siege-rank li.head {
+  display: block;
+  background: #2b3550;
+  color: #fff;
+  text-align: center;
+  border: 0;
+}
+.siege-rank li.new {
+  background: #ff8a3d;
+  color: #fff;
+}
+.siege-rank li.new span {
+  color: #fff;
+}
+.siege-rank li.me {
+  outline: 2px solid #ffc93d;
+  outline-offset: -2px;
+}
+.siege-find {
+  position: absolute;
+  left: 10px;
+  bottom: 34px;
+  pointer-events: auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: linear-gradient(180deg, #ff9a4a, #ef6a1f);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(239, 106, 31, 0.45);
+}
+.siege-me-tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: #2a2418;
+  color: #ffd34d;
+  border: 2px solid #ffc93d;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.lotto-winners {
+  max-height: 180px;
+  overflow: auto;
+}
+@media (max-width: 600px) {
+  .siege-goal {
+    display: none;
+  }
+  .siege-count {
+    font-size: 13px;
+  }
+  .siege-count b {
+    font-size: 19px;
+  }
+  .siege-rank {
+    width: 128px;
+    font-size: 12px;
+  }
+  .siege-gate {
+    font-size: 20px;
+  }
+  .siege-rank li:nth-child(n + 5) {
+    display: none;
   }
 }
 

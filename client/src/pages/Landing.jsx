@@ -29,6 +29,8 @@ const STYLE_TEXT = {
   marbles: '물리 엔진 위에서 구슬이 결승선으로 달려요',
   ladder: '사다리를 타고 내려가 결과에 도착해요',
   lotto: '바람에 섞인 공 중 구멍으로 먼저 올라온 공이 당첨돼요',
+  siege:
+    '수백 명의 병사가 사다리와 부서진 성문으로, 먼저 성에 들어온 순서대로 당첨돼요',
 };
 
 const CHECKS = [
@@ -237,7 +239,7 @@ export default function Landing() {
       <section className="lp-wrap lp-sec">
         <h2>보는 재미도 놓치지 않아요</h2>
         <p className="lead">
-          추첨 방식은 다섯 가지예요. 인원에 맞는 방식을 고르면 연출이 더
+          추첨 방식은 여섯 가지예요. 인원에 맞는 방식을 고르면 연출이 더
           자연스러워요.
         </p>
         <div className="lp-styles">
