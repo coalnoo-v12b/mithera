@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useApp } from '../AppContext.js';
 import Logo from '../components/Logo.jsx';
@@ -7,7 +7,6 @@ import Logo from '../components/Logo.jsx';
 export default function Auth() {
   const { setMe, toast } = useApp();
 
-  const nav = useNavigate();
   const [params] = useSearchParams();
   const [signup, setSignup] = useState(params.get('mode') === 'signup');
   const [f, setF] = useState({ nickname: '', email: '', password: '' });
@@ -53,27 +52,17 @@ export default function Auth() {
 
   return (
     <section className="auth">
-      <button
-        className="link small auth-back"
-        type="button"
-        onClick={() => nav('/')}
-      >
-        ← 홈으로
-      </button>
-      <div className="logo">
-        <Logo size={72} />
+      <div className="auth-brand">
+        <Link to="/" className="logo" aria-label="홈으로">
+          <Logo size={40} />
+        </Link>
+        <h1>미더라</h1>
       </div>
-      <h1>미더라</h1>
       <p className="sub">
-        Midura · 결과를 바꿀 수 없고,
+        결과를 바꿀 수 없고,
         <br />
         누구나 직접 검증할 수 있는 추첨
       </p>
-      <ul className="auth-points">
-        <li>🔒 마감할 때 난수를 먼저 봉인</li>
-        <li>⛓ 결과는 해시로 이어져 수정 불가</li>
-        <li>🔎 내 브라우저에서 직접 검증</li>
-      </ul>
       <form onSubmit={submit}>
         {signup && (
           <input
