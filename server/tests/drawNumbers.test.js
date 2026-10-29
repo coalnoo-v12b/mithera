@@ -116,7 +116,7 @@ describe('번호/이름 검색', () => {
   const searchWith = async (q) => {
     loginAs('user');
     const findSpy = jest.spyOn(Draw, 'find').mockReturnValue({
-      sort: () => ({ limit: () => Promise.resolve([]) }),
+      sort: () => ({ limit: () => ({ populate: () => Promise.resolve([]) }) }),
     });
     const res = await request(app)
       .get('/api/draws')

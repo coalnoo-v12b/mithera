@@ -140,7 +140,10 @@ const list = async (req, res) => {
     Boolean
   );
   const filter = parts.length > 1 ? { $and: parts } : parts[0] || {};
-  const draws = await Draw.find(filter).sort({ createdAt: -1 }).limit(100);
+  const draws = await Draw.find(filter)
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .populate('createdBy', 'nickname');
   const uid = String(req.user._id);
   res.json({
     draws: draws.map((d) => ({
@@ -153,7 +156,8 @@ const list = async (req, res) => {
       drawAt: d.drawAt,
       participantCount: d.participants.length,
       joined: d.participants.some((p) => String(p) === uid),
-      mine: isOwner(req, d),
+      mine: String(d.createdBy?._id ?? d.createdBy) === uid,
+      creator: d.createdBy?.nickname ?? null,
       hasPassword: !!d.hasPassword,
       createdAt: d.createdAt,
     })),
