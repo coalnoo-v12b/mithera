@@ -66,7 +66,7 @@ function verifyResult(r, prev) {
   const redo = pickWinners(sorted, r.winnerCount, r.seed);
   return [
     [
-      'seed 가 마감 때 공개한 commitment 와 일치',
+      'seed가 마감 때 공개한 commitment와 일치',
       sha256(r.seed) === r.commitment,
     ],
     [

@@ -21,7 +21,7 @@ const signup = async (req, res) => {
   if (password.length < 8)
     return fail(res, 400, '비밀번호는 8자 이상이어야 해요');
   if (!nickname || nickname.length > 20)
-    return fail(res, 400, '닉네임은 1~20자로 입력해줘');
+    return fail(res, 400, '닉네임은 1~20자로 입력해 주세요');
   if (await User.exists({ email }))
     return fail(res, 409, '이미 가입된 이메일이에요');
   const user = await User.create({
