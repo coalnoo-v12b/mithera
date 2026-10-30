@@ -30,7 +30,7 @@ export default function New() {
     try {
       const when = new Date(f.drawAt);
       if (isNaN(when.getTime())) {
-        toast('추첨 날짜와 시간을 확인해줘');
+        toast('추첨 날짜와 시간을 확인해 주세요');
         return;
       }
       const { draw } = await api('/draws', {
@@ -112,6 +112,7 @@ export default function New() {
           <label>연출 방식</label>
           <div className="style-pick">
             {[
+              ['siege', '🏰 성벽 탈환전'],
               ['lotto', '🎱 로또 추첨기'],
               ['marbles', '🏁 구슬 레이스'],
               ['ladder', '🪜 사다리타기'],

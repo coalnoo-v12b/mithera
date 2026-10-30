@@ -88,6 +88,48 @@ const PROVIDERS = {
       };
     },
   },
+  kakao: {
+    label: '카카오',
+    prefix: 'KAKAO',
+    authUrl: 'https://kauth.kakao.com/oauth/authorize',
+    // 받을 정보는 카카오 콘솔의 동의항목(닉네임)으로 정한다
+    scope: null,
+    async fetchProfile(cfg, code) {
+      const tokenRes = await fetch('https://kauth.kakao.com/oauth/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          client_id: cfg.clientId,
+          client_secret: cfg.clientSecret,
+          redirect_uri: cfg.redirectUri,
+          code,
+        }),
+      });
+      if (!tokenRes.ok) return null;
+      const { access_token: accessToken } = await tokenRes.json();
+      if (!accessToken) return null;
+
+      const infoRes = await fetch('https://kapi.kakao.com/v2/user/me', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!infoRes.ok) return null;
+      const info = await infoRes.json();
+      if (!info.id) return null;
+      const account = info.kakao_account || {};
+      return {
+        providerId: String(info.id),
+        // 이메일은 동의항목에서 받지 않는다 (네이버와 같이 저장하지 않음)
+        email: undefined,
+        emailVerified: false,
+        name:
+          (account.profile && account.profile.nickname) ||
+          (info.properties && info.properties.nickname),
+      };
+    },
+  },
 };
 
 // 같은 제공자 ID가 있으면 그 계정으로 로그인, 없으면 새 계정을 만든다.
@@ -180,4 +222,6 @@ module.exports = {
   googleCallback: finishLogin('google'),
   naverLogin: startLogin('naver'),
   naverCallback: finishLogin('naver'),
+  kakaoLogin: startLogin('kakao'),
+  kakaoCallback: finishLogin('kakao'),
 };

@@ -10,7 +10,7 @@ npm run dev:client
 ```
 
 - 개발 서버: http://localhost:5173
-- `/api` 요청은 `vite.config.js`의 프록시를 통해 `http://localhost:5000`(서버)으로 전달됩니다. 서버를 먼저 실행해 주세요.
+- `vite.config.js`의 프록시가 `/api` 요청을 `http://localhost:5000`(서버)으로 넘겨줍니다. 서버를 먼저 실행해 주세요.
 
 ## 기타 명령
 - 린트: `npm run lint`

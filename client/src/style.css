@@ -263,8 +263,15 @@ label {
   background: #fee500;
   border-color: #fee500;
   color: #3c1e1e;
+}
+/* /login-old 보관본은 카카오 버튼이 아직 비활성이다 */
+.auth .kakao-btn:disabled {
   cursor: not-allowed;
   opacity: 0.6;
+}
+.auth .last-badge.kakao-badge {
+  background: #3c1e1e;
+  color: #fee500;
 }
 .auth .kakao-btn svg {
   width: 22px;
@@ -304,6 +311,62 @@ label {
   width: 100%;
   max-width: 380px;
   margin: 0 auto;
+}
+/* 이용약관·개인정보처리방침 링크 (로그인 화면, 랜딩 하단) */
+.legal-links {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.legal-links a {
+  color: inherit;
+}
+
+/* 이용약관·개인정보처리방침 페이지 */
+.legal {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 20px 56px;
+  line-height: 1.7;
+}
+.legal-head {
+  margin-bottom: 20px;
+}
+.legal-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+.legal h1 {
+  margin: 20px 0 4px;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+.legal h2 {
+  margin: 28px 0 8px;
+  font-size: 17px;
+}
+.legal p,
+.legal ul {
+  margin: 0 0 8px;
+}
+.legal ul {
+  padding-left: 20px;
+}
+.legal li + li {
+  margin-top: 4px;
+}
+.legal a {
+  color: var(--primary);
+}
+.legal-foot {
+  margin-top: 36px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
 }
 @media (min-width: 860px) {
   .auth.auth-vox {
@@ -966,6 +1029,58 @@ label {
   animation: float 3.2s ease-in-out infinite;
   filter: drop-shadow(0 16px 28px rgba(99, 102, 241, 0.5));
 }
+
+/* 스크롤로 합쳐지는 엠블럼: --e(1→0)는 흩어진 정도, --p(0→1)는 진행도 */
+.crest-stage {
+  --e: 1;
+  --p: 0;
+  aspect-ratio: 199 / 256;
+}
+.crest {
+  position: relative;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform: rotateX(calc(var(--e) * 8deg));
+}
+.crest-piece,
+.crest-whole {
+  position: absolute;
+  inset: 0;
+  background: var(--img) center / 100% 100%;
+}
+.crest-piece {
+  transform: translate3d(
+      calc(var(--x) * var(--e)),
+      calc(var(--y) * var(--e)),
+      calc(var(--z) * var(--e))
+    )
+    rotateX(calc(var(--rx) * var(--e))) rotateY(calc(var(--ry) * var(--e)))
+    rotateZ(calc(var(--rz) * var(--e)));
+  will-change: transform;
+}
+.crest-whole {
+  --img: url('/crest/full.webp');
+  transform: translateZ(1px);
+  opacity: clamp(0, 1 - var(--e) * 40, 1);
+}
+/* 금속 위를 지나가는 반사광 */
+.crest-piece::after,
+.crest-whole::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 244, 214, 0.45) 50%,
+    transparent 65%
+  );
+  background-size: 300% 100%;
+  background-position: calc(100% - var(--p) * 100%) 0;
+  mix-blend-mode: soft-light;
+  /* 투명한 부분에는 빛이 비치지 않게 조각 모양으로 가린다 */
+  mask: var(--img) center / 100% 100%;
+}
 .lp-marble {
   position: absolute;
   border-radius: 50%;
@@ -1197,7 +1312,7 @@ label {
     min-height: 360px;
   }
   .lp-styles {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -1358,6 +1473,243 @@ label {
 @media (max-width: 600px) {
   .lotto-stage {
     height: 340px;
+  }
+}
+
+/* 성벽 탈환전 (3D 기록 재생) 화면 위 안내 */
+.siege-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: inherit;
+  color: #2a2418;
+}
+.siege-goal {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(255, 248, 230, 0.92);
+  border: 2px solid #c79a4a;
+  font-size: 13px;
+  font-weight: 800;
+}
+.siege-count {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 16px;
+  border-radius: 12px;
+  background: rgba(255, 248, 230, 0.95);
+  border: 2px solid #c79a4a;
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.siege-count b {
+  color: #ef6a1f;
+  font-size: 24px;
+  margin: 0 2px;
+}
+.siege-count small {
+  display: block;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b6150;
+}
+.siege-gate {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 22px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #7a4a22, #5a3417);
+  border: 3px solid #e9b44c;
+  color: #ffe08a;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  animation: siege-gate 2.6s ease forwards;
+}
+.siege-gate small {
+  display: block;
+  text-align: center;
+  font-size: 15px;
+  color: #ffd0a0;
+  letter-spacing: 0.02em;
+}
+@keyframes siege-gate {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1.08);
+  }
+  20% {
+    transform: translateX(-50%) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+.siege-bubble {
+  position: absolute;
+  top: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  animation: siege-bubble 1.4s ease forwards;
+}
+.siege-bubble b {
+  color: #ef6a1f;
+}
+@keyframes siege-bubble {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateX(-50%);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.siege-rank {
+  position: absolute;
+  top: 46px; /* 오른쪽 위 전체화면 버튼 아래 */
+  right: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: 150px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 252, 244, 0.95);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+  font-weight: 700;
+}
+.siege-rank li {
+  display: flex;
+  gap: 10px;
+  padding: 4px 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+.siege-rank li span {
+  min-width: 26px;
+  color: #6b6150;
+}
+.siege-rank li em {
+  flex: 1;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.siege-rank li i {
+  font-style: normal;
+  font-size: 11px;
+  color: #2f6fe0;
+}
+.siege-rank li.new i {
+  color: #fff;
+}
+.siege-rank li.head {
+  display: block;
+  background: #2b3550;
+  color: #fff;
+  text-align: center;
+  border: 0;
+}
+.siege-rank li.new {
+  background: #ff8a3d;
+  color: #fff;
+}
+.siege-rank li.new span {
+  color: #fff;
+}
+.siege-rank li.me {
+  outline: 2px solid #ffc93d;
+  outline-offset: -2px;
+}
+.siege-find {
+  position: absolute;
+  left: 10px;
+  bottom: 34px;
+  pointer-events: auto;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: linear-gradient(180deg, #ff9a4a, #ef6a1f);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(239, 106, 31, 0.45);
+}
+.siege-me-tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: #2a2418;
+  color: #ffd34d;
+  border: 2px solid #ffc93d;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.lotto-winners {
+  max-height: 180px;
+  overflow: auto;
+}
+@media (max-width: 600px) {
+  .siege-goal {
+    display: none;
+  }
+  .siege-count {
+    font-size: 13px;
+  }
+  .siege-count b {
+    font-size: 19px;
+  }
+  .siege-rank {
+    width: 128px;
+    font-size: 12px;
+  }
+  .siege-gate {
+    font-size: 20px;
+  }
+  .siege-rank li:nth-child(n + 5) {
+    display: none;
   }
 }
 

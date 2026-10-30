@@ -13,6 +13,7 @@ import Auth from './pages/Auth.jsx';
 import AuthOld from './pages/AuthOld.jsx';
 import AuthVox from './pages/AuthVox.jsx';
 import Landing from './pages/Landing.jsx';
+import Legal from './pages/Legal.jsx';
 import List from './pages/List.jsx';
 import New from './pages/New.jsx';
 import Detail from './pages/Detail.jsx';
@@ -61,8 +62,11 @@ export default function App() {
           {/* 실험용·보관용 로그인 화면. 로그인 상태에서도 미리 볼 수 있게 둔다 */}
           <Route path="/login-vox" element={<AuthVox />} />
           <Route path="/login-old" element={<AuthOld />} />
+          <Route path="/privacy" element={<Legal kind="privacy" />} />
+          <Route path="/terms" element={<Legal kind="terms" />} />
           <Route path="/lab/lotto" element={lab('lotto')} />
           <Route path="/lab/roulette" element={lab('roulette')} />
+          <Route path="/lab/siege" element={lab('siege')} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       ) : (
@@ -71,8 +75,11 @@ export default function App() {
           <Route path="/login" element={<Auth />} />
           <Route path="/login-vox" element={<AuthVox />} />
           <Route path="/login-old" element={<AuthOld />} />
+          <Route path="/privacy" element={<Legal kind="privacy" />} />
+          <Route path="/terms" element={<Legal kind="terms" />} />
           <Route path="/lab/lotto" element={lab('lotto')} />
           <Route path="/lab/roulette" element={lab('roulette')} />
+          <Route path="/lab/siege" element={lab('siege')} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       )}

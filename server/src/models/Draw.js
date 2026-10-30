@@ -7,10 +7,11 @@ const drawSchema = new mongoose.Schema({
   description: { type: String, trim: true, maxlength: 300, default: '' },
   style: {
     type: String,
-    enum: ['wheel', 'cards', 'marbles', 'ladder', 'lotto'],
+    enum: ['wheel', 'cards', 'marbles', 'ladder', 'lotto', 'siege'],
     default: 'wheel',
   },
-  winnerCount: { type: Number, required: true, min: 1, max: 100 },
+  // 보통 100명까지, 성벽 탈환전은 200명까지 (방식별 한도는 drawController 가 확인)
+  winnerCount: { type: Number, required: true, min: 1, max: 200 },
   drawAt: { type: Date, required: true }, // 추첨 예정 일시 (안내용, 실행은 관리자가 직접)
   status: {
     type: String,

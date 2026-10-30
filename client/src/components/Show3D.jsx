@@ -27,12 +27,17 @@ function loadSpeed(key) {
 //   Stage: React.lazy 로 불러온 장면 컴포넌트, decode: 녹화를 푸는 함수
 //   speedKey: 재생 속도를 기억할 localStorage 키, idleText: 첫 당첨 전 안내 문구
 //   chipColor(i): 당첨자 목록의 점 색
+//   popup: 당첨될 때마다 이름을 크게 띄울지 (당첨자가 아주 많은 방식은 장면이 직접 알린다)
+//   loadingText: 장면을 불러오는 동안의 문구, meId: 보는 사람의 회원 id (장면이 '내 것'을 표시할 때 씀)
 export default function Show3D({
   Stage,
   decode,
   speedKey,
   idleText,
   chipColor,
+  popup = true,
+  loadingText = '추첨기를 준비하는 중…',
+  meId,
   result,
   runKey,
   onDone,
@@ -59,6 +64,7 @@ export default function Show3D({
     () => result.participants.map((p) => p.nickname),
     [result]
   );
+  const me = result.participants.findIndex((p) => p.id === meId);
   if (!recording || !decoded) return null;
   return (
     <>
@@ -67,6 +73,9 @@ export default function Show3D({
         Stage={Stage}
         idleText={idleText}
         chipColor={chipColor}
+        popup={popup}
+        loadingText={loadingText}
+        me={me}
         recording={recording}
         decoded={decoded}
         names={names}
@@ -96,6 +105,9 @@ function Run({
   Stage,
   idleText,
   chipColor,
+  popup,
+  loadingText,
+  me,
   recording,
   decoded,
   names,
@@ -127,13 +139,14 @@ function Run({
   useEffect(() => () => clearTimeout(popTimer.current), []);
   const onArrive = useCallback(
     (k, who) => {
-      pop();
       setArrived((a) => [...a, who]);
+      if (!popup) return;
+      pop();
       setPopName({ k, name: names[who] });
       clearTimeout(popTimer.current);
       popTimer.current = setTimeout(() => setPopName(null), 1800);
     },
-    [names]
+    [names, popup]
   );
   const onCapture = useCallback(() => {}, []);
   const finish = useCallback(() => {
@@ -144,9 +157,7 @@ function Run({
   return (
     <>
       <div className="lotto-stage">
-        <Suspense
-          fallback={<div className="lotto-loading">추첨기를 준비하는 중…</div>}
-        >
+        <Suspense fallback={<div className="lotto-loading">{loadingText}</div>}>
           <Stage
             recording={recording}
             decoded={decoded}
@@ -156,6 +167,7 @@ function Run({
             onCapture={onCapture}
             onArrive={onArrive}
             onDone={finish}
+            me={me}
           />
         </Suspense>
         <div className="stage-hint">

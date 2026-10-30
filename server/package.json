@@ -6,7 +6,7 @@
   "scripts": {
     "test": "jest",
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
+    "dev": "node --watch-path=./src src/server.js",
     "lint": "eslint .",
     "format": "prettier --write .",
     "backfill:draw-no": "node scripts/backfill-draw-no.js"

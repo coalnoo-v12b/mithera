@@ -7,9 +7,13 @@ const hex = (buf) =>
 export const RACE_ALGO = 'matter-physics-v1';
 export const LOTTO_ALGO = 'rapier-lotto-v1';
 export const ROULETTE_ALGO = 'rapier-roulette-v1';
+export const SIEGE_ALGO = 'midura-siege-v1';
 // 물리 엔진이 당첨자를 정하는 방식: 경기 녹화를 따로 받아서 재생·검증한다
 export const isPhysicsAlgo = (algo) =>
-  algo === RACE_ALGO || algo === LOTTO_ALGO || algo === ROULETTE_ALGO;
+  algo === RACE_ALGO ||
+  algo === LOTTO_ALGO ||
+  algo === ROULETTE_ALGO ||
+  algo === SIEGE_ALGO;
 export const canVerify = () => typeof crypto !== 'undefined' && !!crypto.subtle;
 export const sha256 = async (s) =>
   hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
@@ -178,9 +182,9 @@ async function raceChecks(r, sorted, raw) {
       '저장된 녹화의 해시가 결과에 기록된 값과 같아요',
       (await sha256(raw)) === r.recordingHash,
     ],
-    ['녹화의 첫 프레임이 seed 로 계산한 출발 위치와 같아요', startOk],
+    ['녹화의 첫 프레임이 seed로 계산한 출발 위치와 같아요', startOk],
     ['녹화된 움직임에서 결승선 도착 순서가 맞아요', orderOk],
-    ['당첨자가 도착 순서의 앞에서부터와 같아요', winnersOk],
+    ['당첨자가 결승선에 먼저 도착한 순서와 같아요', winnersOk],
   ];
 }
 
@@ -234,7 +238,7 @@ async function lottoChecks(r, sorted, raw) {
       (await sha256(raw)) === r.recordingHash,
     ],
     ['녹화에서 공이 배출관으로 뽑힌 순간과 순서가 맞아요', captureOk],
-    ['당첨자가 뽑힌 순서의 앞에서부터와 같아요', winnersOk],
+    ['당첨자가 공이 뽑힌 순서와 같아요', winnersOk],
   ];
 }
 
@@ -304,6 +308,94 @@ async function rouletteChecks(r, sorted, raw) {
   ];
 }
 
+/* ---------- 성벽 탈환전 ---------- */
+// 시뮬레이션은 서버 검증에서 다시 돌린다. 여기서는 기록이 결과와 모순되지 않는지 확인한다:
+// 들어왔다고 기록된 순간 그 병사의 발이 성벽 위 도착 구역(사다리 길) 또는 성문 안쪽 도착선 너머(성문 길)에 있었는지,
+// 성문 길은 문이 부서진 뒤에만 쓰였는지, 문은 당첨 정원이 차기 전에 부서졌는지, 들어온 뒤에는 아무 일도 없었는지.
+const SIEGE_GONE = 8; // server/src/utils/siege.js 의 ST.GONE
+async function siegeChecks(r, sorted, raw) {
+  if (!raw) return [['추첨 녹화를 불러오지 못했어요', false]];
+  let rec;
+  try {
+    rec = JSON.parse(raw);
+  } catch {
+    return [['추첨 녹화가 올바른 형식이 아니에요', false]];
+  }
+  const n = sorted.length;
+  const L = rec.layout || {};
+  const R = rec.ram || {};
+  const per = rec.hz / rec.fps;
+  const W = rec.winnerCount;
+  let arriveOk =
+    rec.kind === 'siege' &&
+    rec.n === n &&
+    Array.isArray(rec.pos) &&
+    rec.pos.length === n &&
+    rec.pos.every((p) => p.length === rec.frames * 3) &&
+    Array.isArray(rec.arrivals) &&
+    rec.arrivals.length >= W &&
+    JSON.stringify(rec.arrivals.map(([i]) => i)) ===
+      JSON.stringify(rec.order) &&
+    new Set(rec.order).size === rec.order.length;
+  const gateOk =
+    arriveOk &&
+    R.breakTick >= 0 &&
+    R.breakTick < rec.arrivals[W - 1][1] &&
+    rec.arrivals.every(([, tick, route]) => route !== 1 || tick >= R.breakTick);
+  if (arriveOk) {
+    const last = new Map(); // 병사마다 마지막 상태 변화 [스텝, 상태]
+    arriveOk = rec.arrivals.every(([i, tick, route], k) => {
+      if (k > 0 && tick < rec.arrivals[k - 1][1]) return false;
+      // 들어온 바로 다음 기록 프레임: 아직 통로 위나 성문 안쪽을 걷고 있어야 한다
+      const frame = Math.min(rec.frames - 1, Math.ceil(tick / per));
+      let x = 0;
+      let y = 0;
+      let z = 0;
+      for (let f = 0; f <= frame; f++) {
+        x += rec.pos[i][f * 3];
+        y += rec.pos[i][f * 3 + 1];
+        z += rec.pos[i][f * 3 + 2];
+      }
+      x /= 100;
+      y /= 100;
+      z /= 100;
+      const inside =
+        route === 1
+          ? y === 0 && z >= L.gate.arriveZ - 0.01 && Math.abs(x) <= L.gate.half
+          : Math.abs(y - L.H) < 0.05 &&
+            z >= L.WZ + L.arriveZ - 0.01 &&
+            z <= L.WZ + L.walk;
+      last.set(i, tick);
+      return inside;
+    });
+    // 들어온 뒤에는 사라지는 것 말고 아무 일도 없어야 한다 (물에 맞아 취소되는 일 없음)
+    if (arriveOk)
+      arriveOk = (rec.events || []).every(
+        ([tick, i, st]) =>
+          !last.has(i) || tick <= last.get(i) || st === SIEGE_GONE
+      );
+  }
+  const winnersOk =
+    arriveOk &&
+    JSON.stringify(rec.order.slice(0, r.winnerCount).map((i) => sorted[i])) ===
+      JSON.stringify(r.winners.map((w) => w.id));
+  return [
+    [
+      '저장된 녹화의 해시가 결과에 기록된 값과 같아요',
+      (await sha256(raw)) === r.recordingHash,
+    ],
+    [
+      '녹화에서 들어왔다고 기록된 순간 병사가 성벽 위 도착 구역이나 성문 안쪽에 있었고, 그 뒤로는 사라지는 것 말고 다른 움직임이 없었어요',
+      arriveOk,
+    ],
+    [
+      '성문은 당첨 정원이 차기 전에 부서졌고, 성문으로는 그 뒤에만 들어왔어요',
+      gateOk,
+    ],
+    ['당첨자가 두 길을 합쳐 성에 들어온 순서와 같아요', winnersOk],
+  ];
+}
+
 // chain: /api/results 의 results 배열 (없으면 체인 연결 검사는 생략)
 // recordingRaw: 물리 방식(구슬 레이스, 로또 추첨기)일 때 /api/draws/:id/recording 의 raw 문자열
 export async function verifyInBrowser(r, drawId, chain, recordingRaw) {
@@ -331,7 +423,7 @@ export async function verifyInBrowser(r, drawId, chain, recordingRaw) {
   };
   const checks = [
     [
-      'seed 의 해시가 마감 때 공개한 commitment 와 같아요',
+      'seed의 해시가 마감 때 공개한 commitment와 같아요',
       (await sha256(r.seed)) === r.commitment,
     ],
     [
@@ -346,6 +438,8 @@ export async function verifyInBrowser(r, drawId, chain, recordingRaw) {
     checks.push(...(await lottoChecks(r, sorted, recordingRaw)));
   } else if (r.algo === ROULETTE_ALGO) {
     checks.push(...(await rouletteChecks(r, sorted, recordingRaw)));
+  } else if (r.algo === SIEGE_ALGO) {
+    checks.push(...(await siegeChecks(r, sorted, recordingRaw)));
   } else {
     const redo = await pickWinners(sorted, r.winnerCount, r.seed);
     checks.push([
