@@ -263,8 +263,15 @@ label {
   background: #fee500;
   border-color: #fee500;
   color: #3c1e1e;
+}
+/* /login-old 보관본은 카카오 버튼이 아직 비활성이다 */
+.auth .kakao-btn:disabled {
   cursor: not-allowed;
   opacity: 0.6;
+}
+.auth .last-badge.kakao-badge {
+  background: #3c1e1e;
+  color: #fee500;
 }
 .auth .kakao-btn svg {
   width: 22px;
