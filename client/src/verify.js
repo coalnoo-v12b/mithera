@@ -182,9 +182,9 @@ async function raceChecks(r, sorted, raw) {
       '저장된 녹화의 해시가 결과에 기록된 값과 같아요',
       (await sha256(raw)) === r.recordingHash,
     ],
-    ['녹화의 첫 프레임이 seed 로 계산한 출발 위치와 같아요', startOk],
+    ['녹화의 첫 프레임이 seed로 계산한 출발 위치와 같아요', startOk],
     ['녹화된 움직임에서 결승선 도착 순서가 맞아요', orderOk],
-    ['당첨자가 도착 순서의 앞에서부터와 같아요', winnersOk],
+    ['당첨자가 결승선에 먼저 도착한 순서와 같아요', winnersOk],
   ];
 }
 
@@ -238,7 +238,7 @@ async function lottoChecks(r, sorted, raw) {
       (await sha256(raw)) === r.recordingHash,
     ],
     ['녹화에서 공이 배출관으로 뽑힌 순간과 순서가 맞아요', captureOk],
-    ['당첨자가 뽑힌 순서의 앞에서부터와 같아요', winnersOk],
+    ['당첨자가 공이 뽑힌 순서와 같아요', winnersOk],
   ];
 }
 
@@ -385,7 +385,7 @@ async function siegeChecks(r, sorted, raw) {
       (await sha256(raw)) === r.recordingHash,
     ],
     [
-      '녹화에서 들어왔다고 기록된 순간 병사가 성벽 위 도착 구역이나 성문 안쪽에 있었고, 그 뒤로 아무 일도 없었어요',
+      '녹화에서 들어왔다고 기록된 순간 병사가 성벽 위 도착 구역이나 성문 안쪽에 있었고, 그 뒤로는 사라지는 것 말고 다른 움직임이 없었어요',
       arriveOk,
     ],
     [
@@ -423,7 +423,7 @@ export async function verifyInBrowser(r, drawId, chain, recordingRaw) {
   };
   const checks = [
     [
-      'seed 의 해시가 마감 때 공개한 commitment 와 같아요',
+      'seed의 해시가 마감 때 공개한 commitment와 같아요',
       (await sha256(r.seed)) === r.commitment,
     ],
     [

@@ -61,7 +61,12 @@ export default function Admin() {
   };
 
   const change = async (u, next) => {
-    if (!window.confirm(`이 회원을 ${next} 로 변경할까요?`)) return;
+    if (
+      !window.confirm(
+        `이 회원을 ${next === 'admin' ? 'admin으로' : 'user로'} 바꿀까요?`
+      )
+    )
+      return;
     try {
       await api('/admin/users/' + u.id, {
         method: 'PATCH',
@@ -157,7 +162,7 @@ export default function Admin() {
                   title={locked ? '변경할 수 없는 계정이에요' : undefined}
                   onClick={() => change(u, next)}
                 >
-                  {next === 'admin' ? 'admin 으로' : 'user 로'}
+                  {next === 'admin' ? 'admin으로' : 'user로'}
                 </button>
               </div>
             );
