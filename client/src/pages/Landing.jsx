@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api, STYLE_LABEL, capacityText } from '../api.js';
 import { useApp } from '../AppContext.js';
 import Logo from '../components/Logo.jsx';
+import ScrollCrest from '../components/ScrollCrest.jsx';
 import { isDark, setTheme } from '../theme.js';
 
 const STEPS = [
@@ -125,7 +126,7 @@ function HeroVisual() {
         />
       ))}
       <div className="lp-logo">
-        <Logo size={116} />
+        <ScrollCrest size={116} />
       </div>
       <div className="lp-mini-chain">
         <div className="block">
