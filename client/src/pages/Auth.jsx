@@ -158,6 +158,11 @@ export default function Auth() {
         >
           {signup ? '이미 계정이 있어요 → 로그인' : '계정이 없어요 → 회원가입'}
         </button>
+        <p className="legal-links">
+          {signup && '가입하면 아래 내용에 동의하게 돼요. '}
+          <Link to="/terms">이용약관</Link> ·{' '}
+          <Link to="/privacy">개인정보처리방침</Link>
+        </p>
       </div>
     </section>
   );

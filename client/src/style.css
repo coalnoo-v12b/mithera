@@ -305,6 +305,62 @@ label {
   max-width: 380px;
   margin: 0 auto;
 }
+/* 이용약관·개인정보처리방침 링크 (로그인 화면, 랜딩 하단) */
+.legal-links {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.legal-links a {
+  color: inherit;
+}
+
+/* 이용약관·개인정보처리방침 페이지 */
+.legal {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 20px 56px;
+  line-height: 1.7;
+}
+.legal-head {
+  margin-bottom: 20px;
+}
+.legal-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+.legal h1 {
+  margin: 20px 0 4px;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+.legal h2 {
+  margin: 28px 0 8px;
+  font-size: 17px;
+}
+.legal p,
+.legal ul {
+  margin: 0 0 8px;
+}
+.legal ul {
+  padding-left: 20px;
+}
+.legal li + li {
+  margin-top: 4px;
+}
+.legal a {
+  color: var(--primary);
+}
+.legal-foot {
+  margin-top: 36px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
 @media (min-width: 860px) {
   .auth.auth-vox {
     grid-template-columns: minmax(0, 1fr) 380px;
