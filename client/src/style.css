@@ -1029,6 +1029,58 @@ label {
   animation: float 3.2s ease-in-out infinite;
   filter: drop-shadow(0 16px 28px rgba(99, 102, 241, 0.5));
 }
+
+/* 스크롤로 합쳐지는 엠블럼: --e(1→0)는 흩어진 정도, --p(0→1)는 진행도 */
+.crest-stage {
+  --e: 1;
+  --p: 0;
+  aspect-ratio: 199 / 256;
+}
+.crest {
+  position: relative;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform: rotateX(calc(var(--e) * 8deg));
+}
+.crest-piece,
+.crest-whole {
+  position: absolute;
+  inset: 0;
+  background: var(--img) center / 100% 100%;
+}
+.crest-piece {
+  transform: translate3d(
+      calc(var(--x) * var(--e)),
+      calc(var(--y) * var(--e)),
+      calc(var(--z) * var(--e))
+    )
+    rotateX(calc(var(--rx) * var(--e))) rotateY(calc(var(--ry) * var(--e)))
+    rotateZ(calc(var(--rz) * var(--e)));
+  will-change: transform;
+}
+.crest-whole {
+  --img: url('/crest/full.webp');
+  transform: translateZ(1px);
+  opacity: clamp(0, 1 - var(--e) * 40, 1);
+}
+/* 금속 위를 지나가는 반사광 */
+.crest-piece::after,
+.crest-whole::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 244, 214, 0.45) 50%,
+    transparent 65%
+  );
+  background-size: 300% 100%;
+  background-position: calc(100% - var(--p) * 100%) 0;
+  mix-blend-mode: soft-light;
+  /* 투명한 부분에는 빛이 비치지 않게 조각 모양으로 가린다 */
+  mask: var(--img) center / 100% 100%;
+}
 .lp-marble {
   position: absolute;
   border-radius: 50%;
