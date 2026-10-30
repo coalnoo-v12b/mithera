@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api, STYLE_LABEL, capacityText } from '../api.js';
 import { useApp } from '../AppContext.js';
 import Logo from '../components/Logo.jsx';
@@ -291,7 +291,13 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="lp-footer">© 미더라 · Midura</footer>
+      <footer className="lp-footer">
+        © 미더라 · Midura
+        <p className="legal-links">
+          <Link to="/terms">이용약관</Link> ·{' '}
+          <Link to="/privacy">개인정보처리방침</Link>
+        </p>
+      </footer>
     </div>
   );
 }
