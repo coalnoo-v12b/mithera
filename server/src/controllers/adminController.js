@@ -43,7 +43,7 @@ const updateUser = async (req, res) => {
   if (!isId(req.params.id)) return fail(res, 400, '잘못된 요청이에요');
   const type = req.body && req.body.user_type;
   if (type !== 'user' && type !== 'admin')
-    return fail(res, 400, 'user_type 은 user 또는 admin 이어야 해요');
+    return fail(res, 400, 'user_type은 user 또는 admin이어야 해요');
   const target = await User.findById(req.params.id);
   if (!target) return fail(res, 404, '회원을 찾을 수 없어요');
   if (type === 'user') {

@@ -78,7 +78,7 @@ export default function List() {
         <div className="hero-sub">
           {stats ? (
             <>
-              지금까지 <b>{stats.drawn}</b>번의 추첨 ·{' '}
+              지금까지 추첨 <b>{stats.drawn}</b>번 ·{' '}
               {stats.chainOk ? (
                 <>
                   변조 <b>0</b>건 ✅

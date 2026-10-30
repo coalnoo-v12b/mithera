@@ -5,7 +5,7 @@ const authLimiter = rateLimit({
   limit: 50,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: '시도가 너무 많아요. 잠시 후 다시 해줘' },
+  message: { error: '시도가 너무 많아요. 잠시 후 다시 시도해 주세요' },
 });
 
 const publicLimiter = rateLimit({
@@ -13,7 +13,7 @@ const publicLimiter = rateLimit({
   limit: 60,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: '요청이 너무 많아요. 잠시 후 다시 해줘' },
+  message: { error: '요청이 너무 많아요. 잠시 후 다시 시도해 주세요' },
 });
 
 // 참여 비밀번호를 계속 바꿔 가며 대입하는 시도를 막는다
@@ -22,7 +22,7 @@ const joinLimiter = rateLimit({
   limit: 30,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: '시도가 너무 많아요. 잠시 후 다시 해줘' },
+  message: { error: '시도가 너무 많아요. 잠시 후 다시 시도해 주세요' },
 });
 
 // 누구나 추첨을 만들 수 있으니, 도배를 막기 위해 한 시간에 20개까지
@@ -31,7 +31,7 @@ const createLimiter = rateLimit({
   limit: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: '추첨을 너무 많이 만들었어요. 잠시 후 다시 해줘' },
+  message: { error: '추첨을 너무 많이 만들었어요. 잠시 후 다시 시도해 주세요' },
 });
 
 module.exports = { authLimiter, publicLimiter, joinLimiter, createLimiter };

@@ -14,7 +14,7 @@ router.get('/lotto', compression(), async (req, res) => {
   const n = Number(req.query.n);
   const w = Number(req.query.w);
   if (!Number.isInteger(n) || n < 1 || n > lotto.MAX_BALLS)
-    return fail(res, 400, `공은 1~${lotto.MAX_BALLS}개로 정해줘`);
+    return fail(res, 400, `공은 1~${lotto.MAX_BALLS}개로 정해 주세요`);
   if (!Number.isInteger(w) || w < 1 || w > Math.min(n, lotto.MAX_WINNERS))
     return fail(res, 400, '당첨 인원이 올바르지 않아요');
   const seed = /^[0-9a-f]{64}$/.test(String(req.query.seed || ''))
@@ -28,7 +28,11 @@ router.get('/roulette', compression(), async (req, res) => {
   const n = Number(req.query.n);
   const w = Number(req.query.w);
   if (!Number.isInteger(n) || n < 1 || n > roulette.MAX_PLAYERS)
-    return fail(res, 400, `참가자는 1~${roulette.MAX_PLAYERS}명으로 정해줘`);
+    return fail(
+      res,
+      400,
+      `참가자는 1~${roulette.MAX_PLAYERS}명으로 정해 주세요`
+    );
   if (!Number.isInteger(w) || w < 1 || w > Math.min(n, roulette.MAX_WINNERS))
     return fail(res, 400, '당첨 인원이 올바르지 않아요');
   const seed = /^[0-9a-f]{64}$/.test(String(req.query.seed || ''))
@@ -42,7 +46,7 @@ router.get('/siege', compression(), async (req, res) => {
   const n = Number(req.query.n);
   const w = Number(req.query.w);
   if (!Number.isInteger(n) || n < 1 || n > siege.MAX_PEOPLE)
-    return fail(res, 400, `참가자는 1~${siege.MAX_PEOPLE}명으로 정해줘`);
+    return fail(res, 400, `참가자는 1~${siege.MAX_PEOPLE}명으로 정해 주세요`);
   if (!Number.isInteger(w) || w < 1 || w > Math.min(n, siege.MAX_WINNERS))
     return fail(res, 400, '당첨 인원이 올바르지 않아요');
   const seed = /^[0-9a-f]{64}$/.test(String(req.query.seed || ''))

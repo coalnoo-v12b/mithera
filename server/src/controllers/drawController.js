@@ -42,7 +42,8 @@ const LIMITS = {
 // 당첨 인원 최대치: 보통 100명, 대규모 방식(성벽 탈환전)은 그 방식의 한도까지
 const maxWinners = (style) =>
   Math.max(100, (LIMITS[style] && LIMITS[style].winners) || 0);
-const fullMsg = (L) => `${L.name}은 최대 ${L.people}명까지 참여할 수 있어요`;
+const fullMsg = (L) =>
+  `${L.name} 방식은 최대 ${L.people}명까지 참여할 수 있어요`;
 
 // 추첨을 마감·실행할 수 있는 사람: 만든 사람 또는 관리자
 const isOwner = (req, d) => String(d.createdBy) === String(req.user._id);
@@ -183,9 +184,9 @@ const create = async (req, res) => {
   const style = STYLES.includes(b.style) ? b.style : 'wheel';
   const drawAt = new Date(b.drawAt);
   if (!b.drawAt || isNaN(drawAt.getTime()))
-    return fail(res, 400, '추첨 날짜와 시간을 입력해줘');
+    return fail(res, 400, '추첨 날짜와 시간을 입력해 주세요');
   if (!title || title.length > 60)
-    return fail(res, 400, '추첨 이름을 1~60자로 입력해줘');
+    return fail(res, 400, '추첨 이름을 1~60자로 입력해 주세요');
   if (description.length > 300)
     return fail(res, 400, '설명은 300자까지 입력할 수 있어요');
   if (
@@ -193,17 +194,21 @@ const create = async (req, res) => {
     winnerCount < 1 ||
     winnerCount > maxWinners(style)
   )
-    return fail(res, 400, `당첨 인원은 1~${maxWinners(style)}명으로 정해줘`);
+    return fail(
+      res,
+      400,
+      `당첨 인원은 1~${maxWinners(style)}명으로 정해 주세요`
+    );
   if (LIMITS[style] && winnerCount > LIMITS[style].winners)
     return fail(
       res,
       400,
-      `${LIMITS[style].name}은 당첨 인원을 ${LIMITS[style].winners}명까지 정할 수 있어요`
+      `${LIMITS[style].name} 방식은 당첨 인원을 ${LIMITS[style].winners}명까지 정할 수 있어요`
     );
   // 참여 비밀번호는 선택. 비워 두면 누구나 참여할 수 있다.
   const password = String(b.password || '');
   if (password && (password.length < 4 || password.length > 30))
-    return fail(res, 400, '참여 비밀번호는 4~30자로 입력해줘');
+    return fail(res, 400, '참여 비밀번호는 4~30자로 입력해 주세요');
   const d = await Draw.create({
     no: await Counter.nextDrawNo(),
     title,
@@ -401,10 +406,10 @@ const run = async (req, res) => {
 // 물리 결과 검증: 같은 seed 로 시뮬레이션을 처음부터 다시 돌려 녹화가 한 글자도 다르지 않은지 확인한다
 const ORDER_LABEL = {
   [race.ALGO]: '당첨자가 녹화에 담긴 결승선 도착 순서와 일치',
-  [lotto.ALGO]: '당첨자가 녹화에 담긴, 구멍으로 뽑혀 나온 순서와 일치',
-  [roulette.ALGO]: '당첨자가 녹화에 담긴, 공이 멈춘 칸의 주인 순서와 일치',
+  [lotto.ALGO]: '당첨자가 녹화에서 공이 구멍으로 뽑혀 나온 순서와 일치',
+  [roulette.ALGO]: '당첨자가 녹화에서 공이 멈춘 칸의 주인 순서와 일치',
   [siege.ALGO]:
-    '당첨자가 녹화에 담긴, 성벽과 성문으로 성에 먼저 들어온 순서와 일치',
+    '당첨자가 녹화에서 성벽과 성문으로 성에 먼저 들어온 순서와 일치',
 };
 async function verifyPhysicsResult(r, prev, engine) {
   const ids = r.participants.map((p) => p.id);
@@ -435,7 +440,7 @@ async function verifyPhysicsResult(r, prev, engine) {
   }
   return [
     [
-      'seed 가 마감 때 공개한 commitment 와 일치',
+      'seed가 마감 때 공개한 commitment와 일치',
       sha256(r.seed) === r.commitment,
     ],
     [
@@ -448,10 +453,7 @@ async function verifyPhysicsResult(r, prev, engine) {
       !!rec && sha256(raw) === r.recordingHash && rec.hash === r.recordingHash,
     ],
     [ORDER_LABEL[r.algo], winnersMatch],
-    [
-      '같은 seed 로 물리 시뮬레이션을 다시 돌려도 똑같은 녹화가 나옴',
-      resimSame,
-    ],
+    ['같은 seed로 물리 시뮬레이션을 다시 돌려도 똑같은 녹화가 나옴', resimSame],
     ['결과 해시가 내용과 일치 (변조 없음)', hashResult(r) === r.hash],
     [
       '직전 결과와 해시 체인이 이어짐',

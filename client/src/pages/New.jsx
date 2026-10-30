@@ -30,7 +30,7 @@ export default function New() {
     try {
       const when = new Date(f.drawAt);
       if (isNaN(when.getTime())) {
-        toast('추첨 날짜와 시간을 확인해줘');
+        toast('추첨 날짜와 시간을 확인해 주세요');
         return;
       }
       const { draw } = await api('/draws', {

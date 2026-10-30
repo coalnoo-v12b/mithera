@@ -14,7 +14,7 @@ const STEPS = [
   {
     icon: '🎲',
     title: '추첨',
-    text: '봉인된 seed 와 확정된 참가자 목록으로 당첨자를 정해요. 같은 입력이면 언제나 같은 결과가 나와요.',
+    text: '봉인된 seed와 확정된 참가자 목록으로 당첨자를 정해요. 같은 입력이면 언제나 같은 결과가 나와요.',
   },
   {
     icon: '🔎',
@@ -30,11 +30,11 @@ const STYLE_TEXT = {
   ladder: '사다리를 타고 내려가 결과에 도착해요',
   lotto: '바람에 섞인 공 중 구멍으로 먼저 올라온 공이 당첨돼요',
   siege:
-    '수백 명의 병사가 사다리와 부서진 성문으로, 먼저 성에 들어온 순서대로 당첨돼요',
+    '병사 수백 명이 사다리와 부서진 성문으로 몰려가고, 먼저 성에 들어온 순서대로 당첨돼요',
 };
 
 const CHECKS = [
-  'seed 가 마감 때 공개한 commitment 와 일치',
+  'seed가 마감 때 공개한 commitment와 일치',
   '참가자 목록이 마감 때 확정한 해시와 일치',
   '공개된 알고리즘으로 다시 계산한 당첨자가 저장된 결과와 일치',
   '결과 해시가 내용과 일치 (변조 없음)',
@@ -100,7 +100,7 @@ function Stats({ stats }) {
         </div>
         <div className="card">
           <b>{stats.chainOk ? <CountUp to={0} /> : '⚠️'}</b>
-          <span>{stats.chainOk ? '변조 감지 ✅' : '변조가 감지됐어요'}</span>
+          <span>{stats.chainOk ? '감지된 변조 ✅' : '변조가 감지됐어요'}</span>
         </div>
       </div>
     </section>
@@ -204,7 +204,7 @@ export default function Landing() {
             <em>공정한 추첨</em>
           </h1>
           <p className="lp-sub">
-            미더라는 추첨 결과를 저장하는 순간 잠가요. 누구나 내 브라우저에서
+            미더라는 추첨 결과를 저장하는 순간 잠가요. 누구나 자기 브라우저에서
             직접 다시 계산해 볼 수 있어요.
           </p>
           <div className="lp-cta">
@@ -237,7 +237,7 @@ export default function Landing() {
       </section>
 
       <section className="lp-wrap lp-sec">
-        <h2>보는 재미도 놓치지 않아요</h2>
+        <h2>보는 재미까지 챙긴 추첨</h2>
         <p className="lead">
           추첨 방식은 여섯 가지예요. 인원에 맞는 방식을 고르면 연출이 더
           자연스러워요.
