@@ -1,0 +1,139 @@
+/* 관리자: 회원 페이지네이션, 대시보드 차트 */
+.pager {
+  justify-content: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+.viz {
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+}
+:root[data-theme='dark'] .viz {
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .viz {
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+  }
+}
+.viz-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.viz-headline {
+  font-size: 13px;
+  color: var(--muted);
+}
+.viz-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 4px 0;
+}
+.viz-legend i,
+.viz-tip i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 5px;
+}
+.viz-plot {
+  position: relative;
+}
+.viz-plot svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  touch-action: pan-y;
+}
+.viz-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.viz-cross {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.viz-tick {
+  fill: var(--muted);
+  font-size: 11px;
+}
+.viz-tip {
+  position: absolute;
+  top: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 2;
+}
+.viz-table summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.viz-table-scroll {
+  max-height: 220px;
+  overflow: auto;
+  margin-top: 6px;
+}
+.viz-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.viz-table th,
+.viz-table td {
+  text-align: left;
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.share-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 13px;
+}
+.share-track {
+  height: 10px;
+  border-radius: 6px;
+  background: var(--line);
+  overflow: hidden;
+}
+.share-track span {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+}
+.share-val {
+  color: var(--muted);
+  font-size: 12px;
+}
