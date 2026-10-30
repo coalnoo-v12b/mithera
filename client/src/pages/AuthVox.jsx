@@ -16,8 +16,10 @@ export default function AuthVox() {
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
-  // 소셜 로그인 실패 후 서버가 ?error=google 또는 ?error=naver 를 붙여 돌려보냄
-  const socialFailed = ['google', 'naver'].includes(params.get('error'));
+  // 소셜 로그인 실패 후 서버가 ?error=google 처럼 제공자 이름을 붙여 돌려보냄
+  const socialFailed = ['google', 'naver', 'kakao'].includes(
+    params.get('error')
+  );
 
   // 서버가 마지막 로그인 방식을 last_login 쿠키에 저장해 둔다
   const lastLogin = (document.cookie.match(/(?:^|; )last_login=([^;]*)/) ||
@@ -139,18 +141,17 @@ export default function AuthVox() {
             </span>
             {lastBadge('naver')}
           </a>
-          {/* 카카오 로그인은 준비 중: 버튼 모양만 두고 연결하지 않음 */}
-          <button
+          <a
             className="btn block kakao-btn"
-            type="button"
-            disabled
-            aria-label="카카오 로그인 준비 중"
-            title="카카오 로그인 준비 중"
+            href="/api/auth/kakao"
+            aria-label={signup ? '카카오로 가입하기' : '카카오로 로그인하기'}
+            title={signup ? '카카오로 가입하기' : '카카오로 로그인하기'}
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M12 3C6.48 3 2 6.58 2 11c0 2.8 1.86 5.27 4.66 6.67L5.5 21.5l4.24-2.8c.73.1 1.48.15 2.26.15 5.52 0 10-3.58 10-8S17.52 3 12 3z" />
             </svg>
-          </button>
+            {lastBadge('kakao')}
+          </a>
         </div>
         <button
           className="link"

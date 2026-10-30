@@ -5,6 +5,8 @@ const {
   googleCallback,
   naverLogin,
   naverCallback,
+  kakaoLogin,
+  kakaoCallback,
 } = require('../controllers/oauthController');
 const { auth } = require('../middlewares/auth');
 const { authLimiter } = require('../middlewares/rateLimit');
@@ -19,5 +21,7 @@ router.get('/auth/google', googleLogin);
 router.get('/auth/google/callback', googleCallback);
 router.get('/auth/naver', naverLogin);
 router.get('/auth/naver/callback', naverCallback);
+router.get('/auth/kakao', kakaoLogin);
+router.get('/auth/kakao/callback', kakaoCallback);
 
 module.exports = router;
