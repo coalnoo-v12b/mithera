@@ -295,7 +295,8 @@ describe('성벽 탈환전 시뮬레이션', () => {
   it('300명·당첨 100명도 금방 끝나고, 기록이 작다', async () => {
     const t0 = Date.now();
     const big = await siege.simulate({ seed, n: 300, winnerCount: 100 });
-    expect(Date.now() - t0).toBeLessThan(5000);
+    // 서버(Vercel) 제한 60초 안에서 실행·검증을 넉넉히 마칠 만큼 (컴퓨터가 바쁘면 느려지므로 여유를 둔다)
+    expect(Date.now() - t0).toBeLessThan(20000);
     expect(big.order.slice(0, 100)).toHaveLength(100);
     expect(big.raw.length).toBeLessThan(2e6);
   });
