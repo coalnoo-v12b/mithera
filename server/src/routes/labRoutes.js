@@ -4,9 +4,10 @@ const compression = require('compression');
 const lotto = require('../utils/lotto');
 const roulette = require('../utils/roulette');
 const siege = require('../utils/siege');
+const zombie = require('../utils/zombie');
 const { fail } = require('../utils/http');
 
-// 개발용 실험 화면(client /#/lab/lotto, /#/lab/roulette, /#/lab/siege)에서 쓰는 미리보기. 결과를 저장하지 않는다.
+// 개발용 실험 화면(client /#/lab/lotto, /#/lab/roulette, /#/lab/siege, /#/lab/zombie)에서 쓰는 미리보기. 결과를 저장하지 않는다.
 // app.js 에서 production 이 아닐 때만 연결한다.
 const router = express.Router();
 
@@ -53,6 +54,20 @@ router.get('/siege', compression(), async (req, res) => {
     ? req.query.seed
     : crypto.randomBytes(32).toString('hex');
   const sim = await siege.simulate({ seed, n, winnerCount: w });
+  res.json({ seed, raw: sim.raw, engine: sim.engine });
+});
+
+router.get('/zombie', compression(), async (req, res) => {
+  const n = Number(req.query.n);
+  const w = Number(req.query.w);
+  if (!Number.isInteger(n) || n < 1 || n > zombie.MAX_PEOPLE)
+    return fail(res, 400, `참가자는 1~${zombie.MAX_PEOPLE}명으로 정해 주세요`);
+  if (!Number.isInteger(w) || w < 1 || w > Math.min(n, zombie.MAX_WINNERS))
+    return fail(res, 400, '당첨 인원이 올바르지 않아요');
+  const seed = /^[0-9a-f]{64}$/.test(String(req.query.seed || ''))
+    ? req.query.seed
+    : crypto.randomBytes(32).toString('hex');
+  const sim = await zombie.simulate({ seed, n, winnerCount: w });
   res.json({ seed, raw: sim.raw, engine: sim.engine });
 });
 

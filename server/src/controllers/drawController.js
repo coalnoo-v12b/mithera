@@ -5,6 +5,7 @@ const race = require('../utils/race');
 const lotto = require('../utils/lotto');
 const roulette = require('../utils/roulette');
 const siege = require('../utils/siege');
+const zombie = require('../utils/zombie');
 const {
   ALGO,
   GENESIS,
@@ -17,10 +18,18 @@ const {
 const { isId, fail } = require('../utils/http');
 const { parseNoQuery } = require('../utils/drawNo');
 
-const STYLES = ['wheel', 'cards', 'marbles', 'ladder', 'lotto', 'siege'];
+const STYLES = [
+  'wheel',
+  'cards',
+  'marbles',
+  'ladder',
+  'lotto',
+  'siege',
+  'zombie',
+];
 // 시뮬레이션(물리 엔진, 병사 시뮬레이션)이 당첨자를 정하는 연출 방식 (seed 는 출발 조건에만 쓰인다)
-const PHYSICS = { marbles: race, lotto, wheel: roulette, siege };
-const ENGINES = [race, lotto, roulette, siege];
+const PHYSICS = { marbles: race, lotto, wheel: roulette, siege, zombie };
+const ENGINES = [race, lotto, roulette, siege, zombie];
 // 기계에 들어가는 인원이 정해진 방식: 참여 인원과 당첨 인원의 최대치
 const LIMITS = {
   lotto: {
@@ -38,8 +47,13 @@ const LIMITS = {
     people: siege.MAX_PEOPLE,
     winners: siege.MAX_WINNERS,
   },
+  zombie: {
+    name: '좀비 탈출',
+    people: zombie.MAX_PEOPLE,
+    winners: zombie.MAX_WINNERS,
+  },
 };
-// 당첨 인원 최대치: 보통 100명, 대규모 방식(성벽 탈환전)은 그 방식의 한도까지
+// 당첨 인원 최대치: 보통 100명, 대규모 방식(성벽 탈환전, 좀비 탈출)은 그 방식의 한도까지
 const maxWinners = (style) =>
   Math.max(100, (LIMITS[style] && LIMITS[style].winners) || 0);
 const fullMsg = (L) =>
@@ -410,6 +424,8 @@ const ORDER_LABEL = {
   [roulette.ALGO]: '당첨자가 녹화에서 공이 멈춘 칸의 주인 순서와 일치',
   [siege.ALGO]:
     '당첨자가 녹화에서 성벽과 성문으로 성에 먼저 들어온 순서와 일치',
+  [zombie.ALGO]:
+    '당첨자가 녹화에서 바리게이트 안 생존선을 먼저 넘은 순서와 일치',
 };
 async function verifyPhysicsResult(r, prev, engine) {
   const ids = r.participants.map((p) => p.id);
