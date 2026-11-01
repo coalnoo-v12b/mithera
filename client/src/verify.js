@@ -8,12 +8,14 @@ export const RACE_ALGO = 'matter-physics-v1';
 export const LOTTO_ALGO = 'rapier-lotto-v1';
 export const ROULETTE_ALGO = 'rapier-roulette-v1';
 export const SIEGE_ALGO = 'midura-siege-v1';
+export const ZOMBIE_ALGO = 'midura-zombie-v1';
 // 물리 엔진이 당첨자를 정하는 방식: 경기 녹화를 따로 받아서 재생·검증한다
 export const isPhysicsAlgo = (algo) =>
   algo === RACE_ALGO ||
   algo === LOTTO_ALGO ||
   algo === ROULETTE_ALGO ||
-  algo === SIEGE_ALGO;
+  algo === SIEGE_ALGO ||
+  algo === ZOMBIE_ALGO;
 export const canVerify = () => typeof crypto !== 'undefined' && !!crypto.subtle;
 export const sha256 = async (s) =>
   hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
@@ -396,6 +398,101 @@ async function siegeChecks(r, sorted, raw) {
   ];
 }
 
+/* ---------- 좀비 탈출 ---------- */
+// 시뮬레이션은 서버 검증에서 다시 돌린다. 여기서는 기록이 결과와 모순되지 않는지 확인한다:
+// 생존했다고 기록된 순간 그 사람이 바리게이트 통로를 지나 금색 생존선을 넘어 있었는지, 셔터가 올라가기 전에는
+// 아무도 통로에 들어가지 않았는지, 물린 사람은 당첨되지 않았고 물린 사람 수가 규칙의 한도 안인지,
+// 생존한 뒤에는 사라지는 것 말고 아무 일도 없었는지.
+const ZOMBIE = { PASS: 5, SAFE: 6, GONE: 7 }; // server/src/utils/zombie.js 의 ST
+async function zombieChecks(r, sorted, raw) {
+  if (!raw) return [['추첨 녹화를 불러오지 못했어요', false]];
+  let rec;
+  try {
+    rec = JSON.parse(raw);
+  } catch {
+    return [['추첨 녹화가 올바른 형식이 아니에요', false]];
+  }
+  const n = sorted.length;
+  const L = rec.layout || {};
+  const per = rec.hz / rec.fps;
+  const W = rec.winnerCount;
+  let arriveOk =
+    rec.kind === 'zombie' &&
+    rec.n === n &&
+    Array.isArray(rec.pos) &&
+    rec.pos.length === n &&
+    rec.pos.every((p) => p.length === rec.frames * 2) &&
+    Array.isArray(rec.arrivals) &&
+    rec.arrivals.length >= W &&
+    Array.isArray(L.gates) &&
+    JSON.stringify(rec.arrivals.map(([i]) => i)) ===
+      JSON.stringify(rec.order) &&
+    new Set(rec.order).size === rec.order.length;
+  const at = (i, frame) => {
+    let x = 0;
+    let z = 0;
+    for (let f = 0; f <= frame; f++) {
+      x += rec.pos[i][f * 2];
+      z += rec.pos[i][f * 2 + 1];
+    }
+    return [x / 100, z / 100];
+  };
+  if (arriveOk) {
+    const safeAt = new Map();
+    arriveOk = rec.arrivals.every(([i, tick], k) => {
+      if (k > 0 && tick < rec.arrivals[k - 1][1]) return false;
+      // 넘기 직전 기록 프레임에는 통로 폭 안에, 넘은 바로 다음 기록 프레임에는 생존선 너머에 있어야 한다
+      const [bx] = at(i, Math.min(rec.frames - 1, Math.floor(tick / per)));
+      const [, az] = at(i, Math.min(rec.frames - 1, Math.ceil(tick / per)));
+      safeAt.set(i, tick);
+      return (
+        az >= L.lineZ - 0.01 &&
+        L.gates.some((g) => Math.abs(bx - g) <= L.gateHalf)
+      );
+    });
+    // 생존한 뒤에는 사라지는 것 말고 아무 일도 없어야 한다
+    if (arriveOk)
+      arriveOk = (rec.events || []).every(
+        ([tick, i, st]) =>
+          !safeAt.has(i) || tick <= safeAt.get(i) || st === ZOMBIE.GONE
+      );
+  }
+  const shutterOk =
+    arriveOk &&
+    L.opensAt >= 0 &&
+    (rec.events || []).every(
+      ([tick, , st]) =>
+        (st !== ZOMBIE.PASS && st !== ZOMBIE.SAFE) || tick >= L.opensAt
+    );
+  const bitten = new Set((rec.bites || []).map(([, i]) => i));
+  const biteOk =
+    arriveOk &&
+    bitten.size === (rec.bites || []).length &&
+    bitten.size <= Math.floor(n * 0.25) &&
+    n - bitten.size >= W &&
+    rec.order.every((i) => !bitten.has(i));
+  const winnersOk =
+    arriveOk &&
+    JSON.stringify(rec.order.slice(0, r.winnerCount).map((i) => sorted[i])) ===
+      JSON.stringify(r.winners.map((w) => w.id));
+  return [
+    [
+      '저장된 녹화의 해시가 결과에 기록된 값과 같아요',
+      (await sha256(raw)) === r.recordingHash,
+    ],
+    [
+      '녹화에서 생존했다고 기록된 순간 그 사람이 통로를 지나 생존선을 넘어 있었고, 그 뒤로는 사라지는 것 말고 다른 움직임이 없었어요',
+      arriveOk,
+    ],
+    ['셔터가 올라가기 전에는 아무도 통로에 들어가지 않았어요', shutterOk],
+    [
+      '물린 사람은 당첨되지 않았고, 물린 사람 수가 규칙의 한도(참가자의 25%, 정원은 늘 남김) 안이에요',
+      biteOk,
+    ],
+    ['당첨자가 생존선을 넘은 순서와 같아요', winnersOk],
+  ];
+}
+
 // chain: /api/results 의 results 배열 (없으면 체인 연결 검사는 생략)
 // recordingRaw: 물리 방식(구슬 레이스, 로또 추첨기)일 때 /api/draws/:id/recording 의 raw 문자열
 export async function verifyInBrowser(r, drawId, chain, recordingRaw) {
@@ -440,6 +537,8 @@ export async function verifyInBrowser(r, drawId, chain, recordingRaw) {
     checks.push(...(await rouletteChecks(r, sorted, recordingRaw)));
   } else if (r.algo === SIEGE_ALGO) {
     checks.push(...(await siegeChecks(r, sorted, recordingRaw)));
+  } else if (r.algo === ZOMBIE_ALGO) {
+    checks.push(...(await zombieChecks(r, sorted, recordingRaw)));
   } else {
     const redo = await pickWinners(sorted, r.winnerCount, r.seed);
     checks.push([

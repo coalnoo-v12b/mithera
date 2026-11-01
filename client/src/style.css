@@ -1159,6 +1159,9 @@ label {
 .lp-styles {
   grid-template-columns: repeat(2, 1fr);
 }
+.lp-styles > .lp-style:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
 .lp-step,
 .lp-style {
   position: relative;
@@ -1212,6 +1215,9 @@ label {
 }
 .st-lotto {
   animation: lp-roll 2s ease-in-out infinite;
+}
+.st-zombie {
+  animation: lp-bob 1.6s ease-in-out infinite;
 }
 .lp-style .lp-style-cap {
   margin-top: 10px;
@@ -1313,6 +1319,12 @@ label {
   }
   .lp-styles {
     grid-template-columns: repeat(3, 1fr);
+  }
+  .lp-styles > .lp-style:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+  .lp-styles > .lp-style:last-child:nth-child(3n + 1) {
+    grid-column: 2;
   }
 }
 
@@ -1709,6 +1721,235 @@ label {
     font-size: 20px;
   }
   .siege-rank li:nth-child(n + 5) {
+    display: none;
+  }
+}
+
+/* 좀비 탈출 (3D 기록 재생) 화면 위 안내 */
+.zombie-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: inherit;
+  color: #1d2433;
+}
+.zombie-title {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(22, 30, 24, 0.86);
+  border: 2px solid #7bd36a;
+  color: #fff;
+  line-height: 1.2;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+.zombie-title b {
+  display: block;
+  font-size: 15px;
+  font-weight: 900;
+  color: #a8f08f;
+}
+.zombie-title span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffe08a;
+}
+.zombie-count {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 16px;
+  border-radius: 12px;
+  background: rgba(255, 252, 240, 0.95);
+  border: 2px solid #ffcf3d;
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+.zombie-count b {
+  color: #e8a400;
+  font-size: 24px;
+  margin: 0 2px;
+}
+.zombie-count small {
+  display: block;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #5b6272;
+}
+.zombie-open {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 22px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #c62f22, #8f1d14);
+  border: 3px solid #ffcf3d;
+  color: #fff3c4;
+  font-size: 24px;
+  font-weight: 900;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  animation: siege-gate 2.6s ease forwards;
+}
+.zombie-bubbles {
+  position: absolute;
+  top: 66px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.zombie-bubble {
+  padding: 4px 13px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  animation: zombie-bubble 2s ease forwards;
+}
+.zombie-bubble.safe b {
+  color: #e8a400;
+}
+.zombie-bubble.rescue b {
+  color: #1f6dff;
+}
+.zombie-bubble.bite {
+  background: #e9f7df;
+}
+.zombie-bubble.bite b {
+  color: #3f8f2a;
+}
+@keyframes zombie-bubble {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  12% {
+    opacity: 1;
+    transform: none;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.zombie-rank {
+  position: absolute;
+  top: 46px; /* 오른쪽 위 전체화면 버튼 아래 */
+  right: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  width: 150px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 252, 244, 0.95);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  font-size: 13px;
+  font-weight: 700;
+}
+.zombie-rank li {
+  display: flex;
+  gap: 10px;
+  padding: 4px 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+.zombie-rank li span {
+  min-width: 26px;
+  color: #5b6272;
+}
+.zombie-rank li em {
+  flex: 1;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.zombie-rank li.head {
+  display: block;
+  background: #1f2a1e;
+  color: #a8f08f;
+  text-align: center;
+  border: 0;
+}
+.zombie-rank li.new {
+  background: #ffcf3d;
+}
+.zombie-rank li.me {
+  outline: 2px solid #ffc93d;
+  outline-offset: -2px;
+}
+.zombie-cam {
+  position: absolute;
+  left: 10px;
+  bottom: 34px;
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+}
+.zombie-cam button {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1d2433;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+.zombie-cam button.find,
+.zombie-cam button.on {
+  background: linear-gradient(180deg, #ffd34d, #e8a400);
+  color: #2a1e00;
+}
+.zombie-me-tag {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+  padding: 3px 9px;
+  border-radius: 8px;
+  background: #1d2433;
+  color: #ffd34d;
+  border: 2px solid #ffc93d;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+}
+@media (max-width: 600px) {
+  .zombie-title {
+    display: none;
+  }
+  .zombie-count {
+    font-size: 13px;
+  }
+  .zombie-count b {
+    font-size: 19px;
+  }
+  .zombie-rank {
+    width: 128px;
+    font-size: 12px;
+  }
+  .zombie-open {
+    font-size: 18px;
+  }
+  .zombie-rank li:nth-child(n + 5) {
     display: none;
   }
 }

@@ -113,6 +113,7 @@ export default function New() {
           <div className="style-pick">
             {[
               ['siege', '🏰 성벽 탈환전'],
+              ['zombie', '🧟 좀비 탈출'],
               ['lotto', '🎱 로또 추첨기'],
               ['marbles', '🏁 구슬 레이스'],
               ['ladder', '🪜 사다리타기'],

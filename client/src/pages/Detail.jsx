@@ -10,6 +10,7 @@ import {
   ROULETTE_ALGO,
   RACE_ALGO,
   SIEGE_ALGO,
+  ZOMBIE_ALGO,
 } from '../verify.js';
 import Layout from '../components/Layout.jsx';
 import Wheel from '../components/Wheel.jsx';
@@ -19,6 +20,7 @@ import Ladder from '../components/Ladder.jsx';
 import Lotto from '../components/Lotto.jsx';
 import Roulette from '../components/Roulette.jsx';
 import Siege from '../components/Siege.jsx';
+import Zombie from '../components/Zombie.jsx';
 import Countdown from '../components/Countdown.jsx';
 import ChainView from '../components/ChainView.jsx';
 import WinnerModal from '../components/WinnerModal.jsx';
@@ -213,6 +215,7 @@ export default function Detail() {
           ladder: Ladder,
           lotto: Lotto,
           siege: Siege,
+          zombie: Zombie,
         }[d.style] || Wheel;
   const live = d.status === 'drawing';
 
@@ -467,7 +470,26 @@ export default function Detail() {
                 <dt>결과 해시</dt>
                 <dd>{r.hash}</dd>
               </dl>
-              {r.algo === SIEGE_ALGO ? (
+              {r.algo === ZOMBIE_ALGO ? (
+                <p className="muted">
+                  마감 때 봉인한 seed로 참가자가 서는 자리, 달리기 빠르기, 출발
+                  반응 시간, 자동차·쇼핑카트·고깔 자리, 좀비 무리의 자리와
+                  빠르기, 골목 기습 타이밍, 경찰의 사격 타이밍과 명중 여부를
+                  정한 뒤, 서버가 사람·좀비·경찰 시뮬레이션을 끝까지 돌려요.
+                  참가자들은 멀리서 출발해 길 한가운데를 막은 좀비 무리를 뚫고,
+                  뒤쫓는 좀비 떼와 골목에서 튀어나오는 좀비를 피해 바리게이트로
+                  달려요. 좀비에게 붙잡히면 잠깐 버티는 사이 경찰의 파란
+                  물감탄이 그 좀비를 맞히면 구출되고, 못 맞히면 물려서 1~2초 뒤
+                  좀비가 되어 다른 참가자를 물어 감염시켜요(물리는 사람은 많아야
+                  참가자의 25%, 살아 있는 사람이 정원보다 적어질 때는 경찰이
+                  반드시 구해요). 바리게이트의 통로 3개는 셔터가 내려가 있다가
+                  살아 있는 사람의 3/4이 모이면 올라가고, 경찰은 통로 앞 무리
+                  전체에서 seed로 다음 사람을 불러 들여보내요(먼저 와서 앞에 서
+                  있었다고 더 잘 불리지 않아요). 통로를 지나 금색 생존선을 먼저
+                  넘은 {r.winnerCount}명이 당첨이에요. 화면은 저장된 기록을
+                  그대로 재생할 뿐이에요.
+                </p>
+              ) : r.algo === SIEGE_ALGO ? (
                 <p className="muted">
                   마감 때 봉인한 seed로 병사가 서는 자리, 거마책 자리,
                   달리기·오르기 속도, 물대포·물총·물바가지를 쓰는 타이밍과 목표,

@@ -8,12 +8,14 @@ import RouletteStage from '../../roulette/RouletteStage.jsx';
 import { decodeRoulette } from '../../roulette/decode.js';
 import SiegeStage from '../../siege/SiegeStage.jsx';
 import { decodeSiege, TEAM_COLORS } from '../../siege/decode.js';
+import ZombieStage from '../../zombie/ZombieStage.jsx';
+import { decodeZombie, VEST_COLORS } from '../../zombie/decode.js';
 import './lotto.css';
 
 // 개발용 실험 화면: 서버(/api/lab/:kind)가 실제 추첨과 같은 물리 엔진으로 돌린 녹화를 재생한다.
 // 결과는 저장하지 않는다. 배포 환경에서는 서버 경로가 열려 있지 않다.
 
-// max, winners 는 server/src/utils/lotto.js, roulette.js, siege.js 의 한도와 같아야 한다
+// max, winners 는 server/src/utils/lotto.js, roulette.js, siege.js, zombie.js 의 한도와 같아야 한다
 const KINDS = {
   lotto: {
     num: '01',
@@ -42,6 +44,16 @@ const KINDS = {
     Stage: SiegeStage,
     decode: decodeSiege,
     color: (i) => TEAM_COLORS[i % TEAM_COLORS.length],
+  },
+  zombie: {
+    num: '04',
+    title: '좀비 탈출',
+    max: 500,
+    winners: 200,
+    fill: 300,
+    Stage: ZombieStage,
+    decode: decodeZombie,
+    color: (i) => VEST_COLORS[i % VEST_COLORS.length],
   },
 };
 const SAMPLE = [
