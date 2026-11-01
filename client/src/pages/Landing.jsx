@@ -32,6 +32,8 @@ const STYLE_TEXT = {
   lotto: '바람에 섞인 공 중 구멍으로 먼저 올라온 공이 당첨돼요',
   siege:
     '병사 수백 명이 사다리와 부서진 성문으로 몰려가고, 먼저 성에 들어온 순서대로 당첨돼요',
+  zombie:
+    '좀비 떼를 피해 바리게이트로 달리고, 경찰의 엄호 속에 생존선을 먼저 넘은 순서대로 당첨돼요',
 };
 
 const CHECKS = [
@@ -240,7 +242,7 @@ export default function Landing() {
       <section className="lp-wrap lp-sec">
         <h2>보는 재미까지 챙긴 추첨</h2>
         <p className="lead">
-          추첨 방식은 여섯 가지예요. 인원에 맞는 방식을 고르면 연출이 더
+          추첨 방식은 일곱 가지예요. 인원에 맞는 방식을 고르면 연출이 더
           자연스러워요.
         </p>
         <div className="lp-styles">
